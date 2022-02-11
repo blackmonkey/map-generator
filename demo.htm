@@ -19,6 +19,7 @@
       position: relative;
       flex: 1;
       height: 100%;
+      min-width: 200px;
     }
     #canvas-wrap {
       position: relative;
@@ -57,7 +58,7 @@
 }
 </div>
 <div id="canvas-wrap">
-  <canvas id="canvas" class="d-block h-100 w-100"></canvas>
+  <canvas id="canvas" class="d-block h-100 mx-auto"></canvas>
   <button id="generate_btn" class="btn btn-primary btn-sm float-start">Generate</button>
 </div>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js" type="text/javascript" charset="utf-8"></script>
@@ -69,6 +70,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/mode-javascript.min.js" integrity="sha512-37ta5K4KVYs+MEmIg2xnZxJrdiQmBSKt+JInvyPrq9uz7aF67lMJT/t91EYoYj520jEcGlih41kCce7BRTmE3Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/theme-dracula.min.js" integrity="sha512-spJzhyfxwWqVa1Tab7js2JKLQD6V5Q1Bsd5QQCJ14b7uw4bOoIPSvR9skHgHNuf2c9AIWR28EzhqvCuc24hUnA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/worker-javascript.min.js" integrity="sha512-hwPBZJdHUlQzk8FedQ6S0eqJw/26H3hQ1vjpdAVJLaZU/AJSkhU29Js3/J+INYpxEUbgD3gubC7jBBr+WDqS2w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/seedrandom/3.0.5/seedrandom.min.js" integrity="sha512-+Ru50BzEpZjlFzVnjSmJfYFPFfY2hS0Kjlu/IvqaJoux7maF5lJrRVUJWJ2LevPls7rd242GLbWEt+zAo4OVVQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="map-generator.js" type="text/javascript" charset="utf-8"></script>
 <script type="text/javascript">
   const COLOR_EMPTY = '#FFFF80',
@@ -101,6 +103,12 @@
     iterArea(dungeon.width, dungeon.height, pos => {
       ctx.fillStyle = dungeon.startPos && dungeon.startPos.x === pos.x && dungeon.startPos.y === pos.y ? COLOR_START_POS : dungeon.walls.get(pos) ? COLOR_WALL : COLOR_EMPTY;
       ctx.fillRect(pos.x * tileSize, pos.y * tileSize, tileSize, tileSize);
+    });
+
+    dungeon.children.forEach(piece => {
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'brown';
+      ctx.strokeRect(piece.left * tileSize, piece.top * tileSize, piece.width * tileSize, piece.height * tileSize);
     });
   }
 
