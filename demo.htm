@@ -1,0 +1,420 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTDXHTML1.0Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en-AU">
+<head>
+  <meta http-equiv="content-type" content="application/xhtml+xml; charset=UTF-8"/>
+  <meta name="author" content="Oscar Cai"/>
+  <meta name="generator" content="Oscar Cai"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-fontpicker/1.5/jquery.fontpicker.min.css" integrity="sha512-uJUBCPYgjwO2/2XiWW0UxlqlF7wX3neoE2bf84niljfavkDGHtvkPqBUWIcIFjhHysuEca3Fl9k2C7j1Z45Qrw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <title>Map Generator</title>
+  <style type="text/css">
+    /* ============ desktop view ============ */
+    @media all and (min-width: 992px) {
+      .dropdown-menu li {
+        position: relative;
+      }
+      .dropdown-menu .submenu {
+        display: none;
+        position: absolute;
+        left:100%; top:-7px;
+      }
+      .dropdown-menu .submenu-left {
+        right:100%; left:auto;
+      }
+      .dropdown-menu > li:hover{ background-color: #f1f1f1 }
+      .dropdown-menu > li:hover > .submenu {
+        display: block;
+      }
+    }
+
+    /* ============ small devices ============ */
+    @media (max-width: 991px) {
+      .dropdown-menu .dropdown-menu {
+        margin-left: 0.7rem;
+        margin-right: 0.7rem;
+        margin-bottom: .5rem;
+      }
+    }
+
+    body {
+      overflow: hidden;
+      width: calc(100vw);
+      height: calc(100vh - 1rem - 40px);
+    }
+    #editor {
+      position: relative;
+      flex: 1;
+      height: 100%;
+      min-width: 200px;
+      border: 1px solid black;
+      padding: 5px;
+    }
+    #canvas-wrap {
+      position: relative;
+      flex: 3;
+      height: 100%;
+      border: 1px solid black;
+    }
+
+    .nav-item, .dropdown-item {
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    a.dropdown-item {
+      display: inline-block;
+      position: relative;
+    }
+    a.dropdown-item input[type='checkbox'], a.dropdown-item input[type='radio'] {
+      display: none;
+    }
+    a.dropdown-item label {
+      display: inline-block;
+      cursor: pointer;
+    }
+    a.dropdown-item label::before {
+      display: inline-block;
+      margin-right: 10px;
+      min-width: 15px;
+      content: "";
+      color: rgba(var(--bs-primary-rgb), var(--bs-bg-opacity));
+    }
+    a.dropdown-item input[type='checkbox']:checked + label::before {
+      content: "✓";
+    }
+    a.dropdown-item input[type='radio']:checked + label::before {
+      content: "●";
+    }
+
+    .has-submenu::after {
+      display: inline-block;
+      content: "»";
+      position: absolute;
+      margin-left: 10px;
+      right: 10px;
+    }
+
+    .font-picker .fp-modal-backdrop {
+      z-index: 6000;
+    }
+    .font-picker .fp-modal {
+      z-index: 6010;
+    }
+  </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="#">Map Generator</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#main_nav"  aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="main_nav">
+      <ul class="navbar-nav">
+        <li class="nav-item active dropdown">
+          <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Generate</a>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="#" onclick="generate_dungeon();">New dungeon</a></li>
+            <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#tagsModal">Tags ...</a></li>
+          </ul>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Notes</a>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="#" onclick="reroll_notes();">Reroll notes</a></li>
+            <li><a class="dropdown-item" href="#" onclick="rearrange_notes();">Rearrange notes</a></li>
+            <li>
+              <a class="dropdown-item has-submenu" href="#">Notes mode</a>
+              <ul class="submenu dropdown-menu">
+                <li><a class="dropdown-item" href="#"><input name="notes-mode" id="notes-mode-off" type="radio" value="Off" onclick="set_notes_mode('off');"/><label for="notes-mode-off">Off</label></a></li>
+                <li><a class="dropdown-item" href="#"><input name="notes-mode" id="notes-mode-default" type="radio" value="Default" checked onclick="set_notes_mode('default');"/><label for="notes-mode-default">Default</label></a></li>
+                <li><a class="dropdown-item" href="#"><input name="notes-mode" id="notes-mode-tailed" type="radio" value="Tailed" onclick="set_notes_mode('tailed');"/><label for="notes-mode-tailed">Tailed</label></a></li>
+                <li><a class="dropdown-item" href="#"><input name="notes-mode" id="notes-mode-legend" type="radio" value="Legend" onclick="set_notes_mode('legend');"/><label for="notes-mode-legend">Legend</label></a></li>
+                <li><a class="dropdown-item" href="#"><input name="notes-mode" id="notes-mode-numbers" type="radio" value="Numbers" onclick="set_notes_mode('numbers');"/><label for="notes-mode-numbers">Numbers</label></a></li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Look &amp; Feel</a>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="#"><input id="rotate-to-fit" type="checkbox" value="Rotate-to-fit" onclick="rotate_to_fit(this);"/><label for="rotate-to-fit">Rotate-to-fit</label></a></li>
+            <li><a class="dropdown-item" href="#"><input id="secret-rooms" type="checkbox" value="Secret rooms" checked onclick="show_secret_rooms(this);"/><label for="secret-rooms">Secret rooms</label></a></li>
+            <li><a class="dropdown-item" href="#"><input id="monochrome" type="checkbox" value="Monochrome" onclick="show_monochrome(this);"/><label for="monochrome">Monochrome</label></a></li>
+            <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#styleModal"><label>Style...</label></a></li>
+            <li>
+              <a class="dropdown-item has-submenu" href="#"><label>Layers</label></a>
+              <ul class="submenu dropdown-menu">
+                <li>
+                  <a class="dropdown-item has-submenu" href="#"><label>Grid</label></a>
+                  <ul class="submenu dropdown-menu">
+                    <li><a class="dropdown-item" href="#"><input name="grid-mode" id="grid-mode-off" type="radio" value="Off" onclick="set_grid_mode('off');"/><label for="grid-mode-off">Off</label></a></li>
+                    <li><a class="dropdown-item" href="#"><input name="grid-mode" id="grid-mode-dotted" type="radio" value="Dotted" checked onclick="set_grid_mode('dotted');"/><label for="grid-mode-dotted">Dotted</label></a></li>
+                    <li><a class="dropdown-item" href="#"><input name="grid-mode" id="grid-mode-dashed" type="radio" value="Dashed" onclick="set_grid_mode('dashed');"/><label for="grid-mode-dashed">Dashed</label></a></li>
+                    <li><a class="dropdown-item" href="#"><input name="grid-mode" id="grid-mode-solid" type="radio" value="Solid" onclick="set_grid_mode('solid');"/><label for="grid-mode-solid">Solid</label></a></li>
+                  </ul>
+                </li>
+                <li><a class="dropdown-item" href="#"><input id="title-story-layer" type="checkbox" value="Title & story" checked onclick="show_title_story_layer(this);"/><label for="title-story-layer">Title &amp; story</label></a></li>
+                <li><a class="dropdown-item" href="#"><input id="water-layer" type="checkbox" value="Water" checked onclick="show_water_layer(this);"/><label for="water-layer">Water</label></a></li>
+                <li><a class="dropdown-item" href="#"><input id="props-layer" type="checkbox" value="Props" checked onclick="show_props_layer(this);"/><label for="props-layer">Props</label></a></li>
+                <li><a class="dropdown-item" href="#"><input id="corners-layer" type="checkbox" value="Corners" checked onclick="show_corners_layer(this);"/><label for="corners-layer">Corners</label></a></li>
+                <li><a class="dropdown-item" href="#"><input id="shadow-layer" type="checkbox" value="Shadow" checked onclick="show_shadow_layer(this);"/><label for="shadow-layer">Shadow</label></a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="#"><label>Water level...</label></a></li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Export</a>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="#" onclick="save_as_png();">Save as PNG</a></li>
+            <li>
+              <a class="dropdown-item has-submenu" href="#">Export as</a>
+              <ul class="submenu dropdown-menu">
+                <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#expPngModal">PNG...</a></li>
+                <li><a class="dropdown-item" href="#" onclick="export_as_svg();">SVG</a></li>
+                <li><a class="dropdown-item" href="#" onclick="export_as_json();">JSON</a></li>
+                <li><a class="dropdown-item" href="#" onclick="export_as_vox();">VOX</a></li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </div> <!-- navbar-collapse. //-->
+  </div> <!-- container-fluid. //-->
+</nav>
+<div class="modal fade" id="tagsModal" tabindex="-1" aria-labelledby="tagsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="tagsModalLabel">Tags</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body d-flex flex-wrap gap-1" id="map-tags">
+        <input type="checkbox" class="btn-check" id="tag-chaotic" autocomplete="off"><label class="btn btn-outline-success" for="tag-chaotic">chaotic</label>
+        <input type="checkbox" class="btn-check" id="tag-colonnades" autocomplete="off"><label class="btn btn-outline-success" for="tag-colonnades">colonnades</label>
+        <input type="checkbox" class="btn-check" id="tag-compact" autocomplete="off"><label class="btn btn-outline-success" for="tag-compact">compact</label>
+        <input type="checkbox" class="btn-check" id="tag-cramped" autocomplete="off"><label class="btn btn-outline-success" for="tag-cramped">cramped</label>
+        <input type="checkbox" class="btn-check" id="tag-crumbling" autocomplete="off"><label class="btn btn-outline-success" for="tag-crumbling">crumbling</label>
+        <input type="checkbox" class="btn-check" id="tag-dangerous" autocomplete="off"><label class="btn btn-outline-success" for="tag-dangerous">dangerous</label>
+        <input type="checkbox" class="btn-check" id="tag-dry" autocomplete="off"><label class="btn btn-outline-success" for="tag-dry">dry</label>
+        <input type="checkbox" class="btn-check" id="tag-dwelling" autocomplete="off"><label class="btn btn-outline-success" for="tag-dwelling">dwelling</label>
+        <input type="checkbox" class="btn-check" id="tag-flooded" autocomplete="off"><label class="btn btn-outline-success" for="tag-flooded">flooded</label>
+        <input type="checkbox" class="btn-check" id="tag-large" autocomplete="off"><label class="btn btn-outline-success" for="tag-large">large</label>
+        <input type="checkbox" class="btn-check" id="tag-multi-level" autocomplete="off"><label class="btn btn-outline-success" for="tag-multi-level">multi-level</label>
+        <input type="checkbox" class="btn-check" id="tag-ordered" autocomplete="off"><label class="btn btn-outline-success" for="tag-ordered">ordered</label>
+        <input type="checkbox" class="btn-check" id="tag-round" autocomplete="off"><label class="btn btn-outline-success" for="tag-round">round</label>
+        <input type="checkbox" class="btn-check" id="tag-secret" autocomplete="off"><label class="btn btn-outline-success" for="tag-secret">secret</label>
+        <input type="checkbox" class="btn-check" id="tag-small" autocomplete="off"><label class="btn btn-outline-success" for="tag-small">small</label>
+        <input type="checkbox" class="btn-check" id="tag-spacious" autocomplete="off"><label class="btn btn-outline-success" for="tag-spacious">spacious</label>
+        <input type="checkbox" class="btn-check" id="tag-square" autocomplete="off"><label class="btn btn-outline-success" for="tag-square">square</label>
+        <input type="checkbox" class="btn-check" id="tag-temple" autocomplete="off"><label class="btn btn-outline-success" for="tag-temple">temple</label>
+        <input type="checkbox" class="btn-check" id="tag-tomb" autocomplete="off"><label class="btn btn-outline-success" for="tag-tomb">tomb</label>
+        <input type="checkbox" class="btn-check" id="tag-treasure" autocomplete="off"><label class="btn btn-outline-success" for="tag-treasure">treasure</label>
+        <input type="checkbox" class="btn-check" id="tag-wet" autocomplete="off"><label class="btn btn-outline-success" for="tag-wet">wet</label>
+        <input type="checkbox" class="btn-check" id="tag-winding" autocomplete="off"><label class="btn btn-outline-success" for="tag-winding">winding</label>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" onclick="generate_with_selected_tags();">Generate</button>
+        <button type="button" class="btn btn-secondary" onclick="generate_with_random_tags();">Random</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal fade" id="expPngModal" tabindex="-1" aria-labelledby="expPngModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="expPngModalLabel">Export as PNG</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="input-group">
+          <span class="input-group-text">Cell size (px)</span>
+          <input type="text" class="form-control" id="exp-cell-size" aria-label="Cell size" value="30">
+          <button class="btn btn-primary" type="button" onclick="$('#exp-cell-size').val(117)">Max</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" onclick="export_as_png($('#exp-cell-size').val());">OK</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal fade" id="styleModal" tabindex="-1" aria-labelledby="styleModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="styleModalLabel">Style</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body row">
+        <div class="col-10">
+          <ul class="nav nav-tabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link btn-sm active" id="colors-tab" data-bs-toggle="tab" data-bs-target="#colors-panel" type="button" role="tab" aria-controls="colors-panel" aria-selected="true">Colors</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link btn-sm" id="stokes-tab" data-bs-toggle="tab" data-bs-target="#stokes-panel" type="button" role="tab" aria-controls="stokes-panel" aria-selected="false">Stokes</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link btn-sm" id="shadow-tab" data-bs-toggle="tab" data-bs-target="#shadow-panel" type="button" role="tab" aria-controls="shadow-panel" aria-selected="false">Shadow</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link btn-sm" id="hatching-tab" data-bs-toggle="tab" data-bs-target="#hatching-panel" type="button" role="tab" aria-controls="hatching-panel" aria-selected="false">Hatching</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link btn-sm" id="text-tab" data-bs-toggle="tab" data-bs-target="#text-panel" type="button" role="tab" aria-controls="text-panel" aria-selected="false">Text</button>
+            </li>
+          </ul>
+          <div class="tab-content">
+            <div class="tab-pane fade container p-2 show active" id="colors-panel" role="tabpanel" aria-labelledby="colors-tab">
+              <div class="align-items-center g-1 row row-cols-3">
+                <div class="col-3">Ink</div>
+                <div class="col"><input type="text" class="form-control form-control-sm" id="style-ink-color" aria-label="Ink" value=""></div>
+                <div class="col"><input type="color" class="form-control form-control-color form-control-plaintext form-control-sm w-25" data-bs-target="#style-ink-color"></div>
+                <div class="col-3">Shading</div>
+                <div class="col"><input type="text" class="form-control form-control-sm" id="style-shading-color" aria-label="Shading" value=""></div>
+                <div class="col"><input type="color" class="form-control form-control-color form-control-plaintext form-control-sm w-25" data-bs-target="#style-shading-color"></div>
+                <div class="col-3">Water</div>
+                <div class="col"><input type="text" class="form-control form-control-sm" id="style-water-color" aria-label="Water" value=""></div>
+                <div class="col"><input type="color" class="form-control form-control-color form-control-plaintext form-control-sm w-25" data-bs-target="#style-water-color"></div>
+                <div class="col-3">Floor</div>
+                <div class="col"><input type="text" class="form-control form-control-sm" id="style-floor-color" aria-label="Floor" value=""></div>
+                <div class="col"><input type="color" class="form-control form-control-color form-control-plaintext form-control-sm w-25" data-bs-target="#style-floor-color"></div>
+                <div class="col-3">Paper</div>
+                <div class="col"><input type="text" class="form-control form-control-sm" id="style-paper-color" aria-label="Paper" value=""></div>
+                <div class="col"><input type="color" class="form-control form-control-color form-control-plaintext form-control-sm w-25" data-bs-target="#style-paper-color"></div>
+              </div>
+            </div>
+            <div class="tab-pane fade container p-2" id="stokes-panel" role="tabpanel" aria-labelledby="stokes-tab">
+              <div class="align-items-center g-1 row row-cols-3">
+                <div class="col-3">Thin</div>
+                <div class="col"><input type="number" class="form-control form-control-sm" id="style-thin-stroke" aria-label="Thin" min="0" value=""></div>
+                <div class="col"></div>
+                <div class="col-3">Hatching</div>
+                <div class="col"><input type="number" class="form-control form-control-sm" id="style-hatching-stroke" aria-label="Hatching" min="0" value=""></div>
+                <div class="col"></div>
+                <div class="col-3">Normal</div>
+                <div class="col"><input type="number" class="form-control form-control-sm" id="style-normal-stroke" aria-label="Normal" min="0" value=""></div>
+                <div class="col"></div>
+                <div class="col-3">Thick</div>
+                <div class="col"><input type="number" class="form-control form-control-sm" id="style-thick-stroke" aria-label="Thick" min="0" value=""></div>
+                <div class="col"></div>
+              </div>
+            </div>
+            <div class="tab-pane fade container p-2" id="shadow-panel" role="tabpanel" aria-labelledby="shadow-tab">
+              <div class="align-items-center g-1 row row-cols-3">
+                <div class="col-3">Color</div>
+                <div class="col"><input type="text" class="form-control form-control-sm" id="style-shadow-color" aria-label="Color" value=""></div>
+                <div class="col"><input type="color" class="form-control form-control-color form-control-plaintext form-control-sm w-25" data-bs-target="#style-shadow-color"></div>
+                <div class="col-3">Distance</div>
+                <div class="col"><input type="number" class="form-control form-control-sm" id="style-shadow-distance" aria-label="Distance" min="0" value=""></div>
+              </div>
+            </div>
+            <div class="tab-pane fade container p-2" id="hatching-panel" role="tabpanel" aria-labelledby="hatching-tab">
+              <div class="align-items-center g-1 row row-cols-3">
+                <div class="col-3">Mode</div>
+                <div class="col">
+                  <select class="form-select form-select-sm" id="style-thin-stroke" aria-label="Mode">
+                    <option value="default" selected>Default</option>
+                    <option value="stonework">Stonework</option>
+                    <option value="bricks">Bricks</option>
+                    <option value="none">None</option>
+                  </select>
+                </div>
+                <div class="col"></div>
+                <div class="col-3">Stokes</div>
+                <div class="col"><input type="number" class="form-control form-control-sm" id="style-hatching-stroke2" aria-label="Stokes" min="0" value=""></div>
+                <div class="col"></div>
+                <div class="col-3">Size</div>
+                <div class="col"><input type="number" class="form-control form-control-sm" id="style-hatching-size" aria-label="Size" min="0" value=""></div>
+                <div class="col"></div>
+                <div class="col-3">Distance</div>
+                <div class="col"><input type="number" class="form-control form-control-sm" id="style-hatching-distance" aria-label="Distance" min="0" value=""></div>
+                <div class="col"></div>
+              </div>
+            </div>
+            <div class="tab-pane fade container p-2" id="text-panel" role="tabpanel" aria-labelledby="text-tab">
+              <div class="align-items-center g-1 row row-cols-3">
+                <div class="col-3">Title</div>
+                <div class="col-7"><input type="text" class="form-control form-control-sm" id="style-title-font" aria-label="Title" value=""></div>
+                <div class="col-2"><input type="number" class="form-control form-control-sm" id="style-title-font-size" min="0"></div>
+                <div class="col-3">Story</div>
+                <div class="col-7"><input type="text" class="form-control form-control-sm" id="style-story-font" aria-label="Story" value=""></div>
+                <div class="col-2"><input type="number" class="form-control form-control-sm" id="style-story-font-size" min="0"></div>
+                <div class="col-3">Notes</div>
+                <div class="col-7"><input type="text" class="form-control form-control-sm" id="style-notes-font" aria-label="Notes" value=""></div>
+                <div class="col-2"><input type="number" class="form-control form-control-sm" id="style-notes-font-size" min="0"></div>
+                <div class="col-3">Legend</div>
+                <div class="col-7"><input type="text" class="form-control form-control-sm" id="style-legend-font" aria-label="Legend" value=""></div>
+                <div class="col-2"><input type="number" class="form-control form-control-sm" id="style-legend-font-size" min="0"></div>
+                <div class="col-3">Symbols</div>
+                <div class="col-7"><input type="text" class="form-control form-control-sm" id="style-symbols-font" aria-label="Symbols" value=""></div>
+                <div class="col-2"><input type="number" class="form-control form-control-sm" id="style-symbols-font-size" min="0"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-2 d-flex flex-column gap-1 ps-0">
+          <button class="btn btn-sm btn-primary dropdown-toggle" type="button" id="presetOpts" data-bs-toggle="dropdown" aria-expanded="false">Preset</button>
+          <ul class="dropdown-menu" aria-labelledby="presetOpts">
+            <li><a class="dropdown-item" href="#" onclick="load_preset_style('default');">Default</a></li>
+            <li><a class="dropdown-item" href="#" onclick="load_preset_style('ancient');">Ancient</a></li>
+            <li><a class="dropdown-item" href="#" onclick="load_preset_style('blackboard');">Blackboard</a></li>
+            <li><a class="dropdown-item" href="#" onclick="load_preset_style('modern');">Modern</a></li>
+          </ul>
+          <button class="btn btn-sm btn-primary" type="button" onclick="loadMapStyle()">Load</button>
+          <button class="btn btn-sm btn-primary" type="button" onclick="saveMapStyle()">Save</button>
+          <button class="btn btn-sm btn-primary" type="button" onclick="applyMapStyle()">Apply</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="canvas-wrap">
+  <canvas id="canvas" class="d-block h-100 mx-auto"></canvas>
+</div>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js" type="text/javascript" charset="utf-8"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous" type="text/javascript"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-fontpicker/1.5/jquery.fontpicker.min.js" integrity="sha512-x1EmGH1DcQPP0ICawrFLwTcl3XualoQYxX+2k2hD1RnfnlfP1JMvAktqLGaKw2WxXKZnpo92/0Nk1eKENydFxA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="map-generator.js" type="text/javascript" charset="utf-8"></script>
+<script type="text/javascript">
+  function collapseNavBarForSmallerScreen() {
+      // close all inner dropdowns when parent is closed
+      $('.navbar .dropdown').on('hidden.bs.dropdown', function() {
+        $(this).find('.submenu').hide();
+      });
+      
+      $('.dropdown-menu a').click(function(e) {
+        let nextOne = $(this).next();
+        if(nextOne && nextOne.hasClass('submenu')) {  
+          // prevent opening link if link needs to open dropdown
+          e.preventDefault();
+          nextOne.toggle();
+        }
+      });
+  }
+
+  $(document).ready(function() {
+    /* Prevent closing from click inside dropdown */
+    $('.dropdown-menu').click(function(e) {
+      e.stopPropagation();
+    });
+
+    if (window.innerWidth < 992) {
+      collapseNavBarForSmallerScreen();
+    }
+
+    $('#style-title-font').fontpicker();
+    $('#style-story-font').fontpicker();
+    $('#style-notes-font').fontpicker();
+    $('#style-legend-font').fontpicker();
+    $('#style-symbols-font').fontpicker();
+  });
+</script>
+</body>
+</html>
