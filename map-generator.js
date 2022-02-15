@@ -92,7 +92,7 @@ function shiftRight(pos, facing) {
  * @param {number} num the number to clamp.
  * @param {number} min the minimal value of the clamp range.
  * @param {number} max the maximal value of the clamp range.
- * @return {number}
+ * @return {number} the clamped number.
  */
 function clamp(num, min, max) {
   return Math.min(Math.max(num, min), max);
