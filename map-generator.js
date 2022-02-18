@@ -9,7 +9,7 @@ const GridType_DOTTED = 1;
 const GridType_DASHED = 2;
 const GridType_SOLID = 3;
 
-const PresetStyle_DEFAULT = {
+const PresetMapStyle_DEFAULT = {
   colorInk: '#222022FF',
   colorWater: '#CCCECEFF',
   colorShading: '#CCCECEFF',
@@ -56,7 +56,7 @@ const PresetStyle_DEFAULT = {
     size: 30
   }
 };
-const PresetStyle_ANCIENT = {
+const PresetMapStyle_ANCIENT = {
   colorInk: '#2C241DFF',
   colorWater: '#99665CFF',
   colorShading: '#BFBEB6FF',
@@ -103,7 +103,7 @@ const PresetStyle_ANCIENT = {
     size: 30
   }
 };
-const PresetStyle_BLACKBOARD = {
+const PresetMapStyle_BLACKBOARD = {
   colorInk: '#EEEEEEFF',
   colorWater: '#646070FF',
   colorShading: '#333333FF',
@@ -150,7 +150,7 @@ const PresetStyle_BLACKBOARD = {
     size: 30
   }
 };
-const PresetStyle_MODERN = {
+const PresetMapStyle_MODERN = {
   colorInk: '#000000FF',
   colorWater: '#DAE5E3FF',
   colorShading: '#000000FF',
@@ -195,6 +195,53 @@ const PresetStyle_MODERN = {
     weight: 800,
     face: 'Neuton',
     size: 30
+  }
+};
+const MapStyle_EMPTY = {
+  colorInk: '',
+  colorWater: '',
+  colorShading: '',
+  colorBg: '',
+  colorPaper: '',
+  strokeThin: 0,
+  strokeHatching: 0,
+  strokeNormal: 0,
+  strokeThick: 0,
+  shadowColor: '',
+  shadowDist: 0,
+  hatchingStyle: '',
+  hatchingStrokes: 0,
+  hatchingSize: 0,
+  hatchingDistance: 0,
+  fontTitle: {
+    italic: false,
+    weight: 0,
+    face: '',
+    size: 0
+  },
+  fontStory: {
+    italic: false,
+    weight: 0,
+    face: '',
+    size: 0
+  },
+  fontNotes: {
+    italic: false,
+    weight: 0,
+    face: '',
+    size: 0
+  },
+  fontLegend: {
+    italic: false,
+    weight: 0,
+    face: '',
+    size: 0
+  },
+  fontSymbols: {
+    italic: false,
+    weight: 0,
+    face: '',
+    size: 0
   }
 };
 
@@ -297,12 +344,21 @@ class MapGenerator {
   }
 
   /**
-   * Load preset style.
-   * @param {string} name of the preset style.
+   * Load preset map style.
+   * @param {Object} styleObj the preset map style.
    */
-  loadPresetStyle(styleObj) {
-    console.log(`MapGenerator.loadPresetStyle(${styleObj})`);
+  loadPresetMapStyle(styleObj) {
     this.config.style = Object.assign({}, styleObj);
+    console.log(`MapGenerator.loadPresetMapStyle() => ${JSON.stringify(this.config.style)})`);
+  }
+
+  /**
+   * Apply map style.
+   * @param {Object} styleObj the map style.
+   */
+  applyMapStyle(styleObj) {
+    this.config.style = Object.assign({}, styleObj);
+    console.log(`MapGenerator.applyMapStyle() => ${JSON.stringify(this.config.style)})`);
   }
 
   savePNG() {

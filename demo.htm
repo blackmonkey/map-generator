@@ -348,10 +348,10 @@
         <div class="col-2 d-flex flex-column gap-1 ps-0">
           <button class="btn btn-sm btn-primary dropdown-toggle" type="button" id="presetOpts" data-bs-toggle="dropdown" aria-expanded="false">Preset</button>
           <ul class="dropdown-menu" aria-labelledby="presetOpts">
-            <li><a class="dropdown-item" href="#" onclick="loadPresetStyle('default');">Default</a></li>
-            <li><a class="dropdown-item" href="#" onclick="loadPresetStyle('ancient');">Ancient</a></li>
-            <li><a class="dropdown-item" href="#" onclick="loadPresetStyle('blackboard');">Blackboard</a></li>
-            <li><a class="dropdown-item" href="#" onclick="loadPresetStyle('modern');">Modern</a></li>
+            <li><a class="dropdown-item" href="#" onclick="loadPresetMapStyle('default');">Default</a></li>
+            <li><a class="dropdown-item" href="#" onclick="loadPresetMapStyle('ancient');">Ancient</a></li>
+            <li><a class="dropdown-item" href="#" onclick="loadPresetMapStyle('blackboard');">Blackboard</a></li>
+            <li><a class="dropdown-item" href="#" onclick="loadPresetMapStyle('modern');">Modern</a></li>
           </ul>
           <button class="btn btn-sm btn-primary" type="button" onclick="loadMapStyle()">Load</button>
           <button class="btn btn-sm btn-primary" type="button" onclick="saveMapStyle()">Save</button>
@@ -553,24 +553,24 @@ function exportAsVox() {
   gMapGenerator.exportVOX();
 }
 
-function loadPresetStyle(name) {
+function loadPresetMapStyle(name) {
   let style = {};
   switch (name) {
     case 'ancient':
-      style = PresetStyle_ANCIENT;
+      style = PresetMapStyle_ANCIENT;
       break;
     case 'blackboard':
-      style = PresetStyle_BLACKBOARD;
+      style = PresetMapStyle_BLACKBOARD;
       break;
     case 'modern':
-      style = PresetStyle_MODERN;
+      style = PresetMapStyle_MODERN;
       break;
     case 'default':
     default:
-      style = PresetStyle_DEFAULT;
+      style = PresetMapStyle_DEFAULT;
       break;
   }
-  gMapGenerator.loadPresetStyle(style);
+  gMapGenerator.loadPresetMapStyle(style);
   updateStyleDialog(style);
 }
 
@@ -583,7 +583,40 @@ function saveMapStyle() {
 }
 
 function applyMapStyle() {
-  console.log('applyMapStyle');
+  let style = Object.assign({}, MapStyle_EMPTY);
+  [['style-color-ink', 'colorInk'],
+   ['style-color-shading', 'colorShading'],
+   ['style-color-water', 'colorWater'],
+   ['style-color-floor', 'colorBg'],
+   ['style-color-paper', 'colorPaper'],
+   ['style-shadow-color', 'shadowColor'],
+   ['style-hatch-style', 'hatchingStyle']].forEach(([id, field]) => style[field] = $(`#${id}`).val());
+  [['style-stroke-thin', 'strokeThin'],
+   ['style-stroke-hatch', 'strokeHatching'],
+   ['style-stroke-normal', 'strokeNormal'],
+   ['style-stroke-thick', 'strokeThick'],
+   ['style-shadow-dist', 'shadowDist'],
+   ['style-hatch-stroke', 'hatchingStrokes'],
+   ['style-hatch-size', 'hatchingSize'],
+   ['style-hatch-dist', 'hatchingDistance']].forEach(([id, field]) => style[field] = parseFloat($(`#${id}`).val()));
+  [['style-title-font-size', 'fontTitle'],
+   ['style-story-font-size', 'fontStory'],
+   ['style-notes-font-size', 'fontNotes'],
+   ['style-legend-font-size', 'fontLegend'],
+   ['style-symbols-font-size', 'fontSymbols']].forEach(([id, field]) => style[field].size = parseFloat($(`#${id}`).val()));
+  [['style-title-font', 'fontTitle'],
+   ['style-story-font', 'fontStory'],
+   ['style-notes-font', 'fontNotes'],
+   ['style-legend-font', 'fontLegend'],
+   ['style-symbols-font', 'fontSymbols']].forEach(([id, field]) => {
+    let tmp = $(`#${id}`).val().split(':');
+    tmp[1] = tmp[1] || '400';
+    style[field].face = tmp[0];
+    style[field].weight = parseInt(tmp[1], 10);
+    style[field].italic = /i$/.test(tmp[1]);
+   });
+
+  gMapGenerator.applyMapStyle(style);
 }
 
 function updateStyleDialog(style) {
