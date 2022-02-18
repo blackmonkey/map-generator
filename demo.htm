@@ -94,13 +94,6 @@
       margin-left: 10px;
       right: 10px;
     }
-
-    .font-picker .fp-modal-backdrop {
-      z-index: 6000;
-    }
-    .font-picker .fp-modal {
-      z-index: 6010;
-    }
   </style>
 </head>
 <body>
@@ -115,23 +108,23 @@
         <li class="nav-item active dropdown">
           <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Generate</a>
           <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="#" onclick="generate_dungeon();">New dungeon</a></li>
+            <li><a class="dropdown-item" href="#" onclick="generateDungeon();">New dungeon</a></li>
             <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#tagsModal">Tags ...</a></li>
           </ul>
         </li>
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Notes</a>
           <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="#" onclick="reroll_notes();">Reroll notes</a></li>
-            <li><a class="dropdown-item" href="#" onclick="rearrange_notes();">Rearrange notes</a></li>
+            <li id="menu-reroll-notes"><a class="dropdown-item" href="#" onclick="rerollNotes();">Reroll notes</a></li>
+            <li id="menu-rearrange-notes"><a class="dropdown-item" href="#" onclick="rearrangeNotes();">Rearrange notes</a></li>
             <li>
               <a class="dropdown-item has-submenu" href="#">Notes mode</a>
               <ul class="submenu dropdown-menu">
-                <li><a class="dropdown-item" href="#"><input name="notes-mode" id="notes-mode-off" type="radio" value="Off" onclick="set_notes_mode('off');"/><label for="notes-mode-off">Off</label></a></li>
-                <li><a class="dropdown-item" href="#"><input name="notes-mode" id="notes-mode-default" type="radio" value="Default" checked onclick="set_notes_mode('default');"/><label for="notes-mode-default">Default</label></a></li>
-                <li><a class="dropdown-item" href="#"><input name="notes-mode" id="notes-mode-tailed" type="radio" value="Tailed" onclick="set_notes_mode('tailed');"/><label for="notes-mode-tailed">Tailed</label></a></li>
-                <li><a class="dropdown-item" href="#"><input name="notes-mode" id="notes-mode-legend" type="radio" value="Legend" onclick="set_notes_mode('legend');"/><label for="notes-mode-legend">Legend</label></a></li>
-                <li><a class="dropdown-item" href="#"><input name="notes-mode" id="notes-mode-numbers" type="radio" value="Numbers" onclick="set_notes_mode('numbers');"/><label for="notes-mode-numbers">Numbers</label></a></li>
+                <li><a class="dropdown-item" href="#"><input name="notes-mode" id="notes-mode-off" type="radio" value="Off" onclick="setNotesMode('off');"/><label for="notes-mode-off">Off</label></a></li>
+                <li><a class="dropdown-item" href="#"><input name="notes-mode" id="notes-mode-default" type="radio" value="Default" checked onclick="setNotesMode('default');"/><label for="notes-mode-default">Default</label></a></li>
+                <li><a class="dropdown-item" href="#"><input name="notes-mode" id="notes-mode-tailed" type="radio" value="Tailed" onclick="setNotesMode('tailed');"/><label for="notes-mode-tailed">Tailed</label></a></li>
+                <li><a class="dropdown-item" href="#"><input name="notes-mode" id="notes-mode-legend" type="radio" value="Legend" onclick="setNotesMode('legend');"/><label for="notes-mode-legend">Legend</label></a></li>
+                <li><a class="dropdown-item" href="#"><input name="notes-mode" id="notes-mode-numbers" type="radio" value="Numbers" onclick="setNotesMode('numbers');"/><label for="notes-mode-numbers">Numbers</label></a></li>
               </ul>
             </li>
           </ul>
@@ -139,9 +132,9 @@
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Look &amp; Feel</a>
           <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="#"><input id="rotate-to-fit" type="checkbox" value="Rotate-to-fit" onclick="rotate_to_fit(this);"/><label for="rotate-to-fit">Rotate-to-fit</label></a></li>
-            <li><a class="dropdown-item" href="#"><input id="secret-rooms" type="checkbox" value="Secret rooms" checked onclick="show_secret_rooms(this);"/><label for="secret-rooms">Secret rooms</label></a></li>
-            <li><a class="dropdown-item" href="#"><input id="monochrome" type="checkbox" value="Monochrome" onclick="show_monochrome(this);"/><label for="monochrome">Monochrome</label></a></li>
+            <li><a class="dropdown-item" href="#"><input id="rotate-to-fit" type="checkbox" value="Rotate-to-fit" onclick="rotateToFit(this);"/><label for="rotate-to-fit">Rotate-to-fit</label></a></li>
+            <li><a class="dropdown-item" href="#"><input id="secret-rooms" type="checkbox" value="Secret rooms" checked onclick="showSecretRooms(this);"/><label for="secret-rooms">Secret rooms</label></a></li>
+            <li><a class="dropdown-item" href="#"><input id="monochrome" type="checkbox" value="Monochrome" onclick="showMonochrome(this);"/><label for="monochrome">Monochrome</label></a></li>
             <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#styleModal"><label>Style...</label></a></li>
             <li>
               <a class="dropdown-item has-submenu" href="#"><label>Layers</label></a>
@@ -149,19 +142,19 @@
                 <li>
                   <a class="dropdown-item has-submenu" href="#"><label>Grid</label></a>
                   <ul class="submenu dropdown-menu">
-                    <li><a class="dropdown-item" href="#"><input name="grid-mode" id="grid-mode-off" type="radio" value="Off" onclick="set_grid_mode('off');"/><label for="grid-mode-off">Off</label></a></li>
-                    <li><a class="dropdown-item" href="#"><input name="grid-mode" id="grid-mode-dotted" type="radio" value="Dotted" checked onclick="set_grid_mode('dotted');"/><label for="grid-mode-dotted">Dotted</label></a></li>
-                    <li><a class="dropdown-item" href="#"><input name="grid-mode" id="grid-mode-dashed" type="radio" value="Dashed" onclick="set_grid_mode('dashed');"/><label for="grid-mode-dashed">Dashed</label></a></li>
-                    <li><a class="dropdown-item" href="#"><input name="grid-mode" id="grid-mode-solid" type="radio" value="Solid" onclick="set_grid_mode('solid');"/><label for="grid-mode-solid">Solid</label></a></li>
+                    <li><a class="dropdown-item" href="#"><input name="grid-mode" id="grid-mode-off" type="radio" value="Off" onclick="setGridMode('off');"/><label for="grid-mode-off">Off</label></a></li>
+                    <li><a class="dropdown-item" href="#"><input name="grid-mode" id="grid-mode-dotted" type="radio" value="Dotted" checked onclick="setGridMode('dotted');"/><label for="grid-mode-dotted">Dotted</label></a></li>
+                    <li><a class="dropdown-item" href="#"><input name="grid-mode" id="grid-mode-dashed" type="radio" value="Dashed" onclick="setGridMode('dashed');"/><label for="grid-mode-dashed">Dashed</label></a></li>
+                    <li><a class="dropdown-item" href="#"><input name="grid-mode" id="grid-mode-solid" type="radio" value="Solid" onclick="setGridMode('solid');"/><label for="grid-mode-solid">Solid</label></a></li>
                   </ul>
                 </li>
-                <li><a class="dropdown-item" href="#"><input id="title-story-layer" type="checkbox" value="Title & story" checked onclick="show_title_story_layer(this);"/><label for="title-story-layer">Title &amp; story</label></a></li>
-                <li><a class="dropdown-item" href="#"><input id="water-layer" type="checkbox" value="Water" checked onclick="show_water_layer(this);"/><label for="water-layer">Water</label></a></li>
-                <li><a class="dropdown-item" href="#"><input id="props-layer" type="checkbox" value="Props" checked onclick="show_props_layer(this);"/><label for="props-layer">Props</label></a></li>
-                <li><a class="dropdown-item" href="#"><input id="corners-layer" type="checkbox" value="Corners" checked onclick="show_corners_layer(this);"/><label for="corners-layer">Corners</label></a></li>
-                <li><a class="dropdown-item" href="#"><input id="shadow-layer" type="checkbox" value="Shadow" checked onclick="show_shadow_layer(this);"/><label for="shadow-layer">Shadow</label></a></li>
+                <li><a class="dropdown-item" href="#"><input id="title-story-layer" type="checkbox" value="Title & story" checked onclick="showTitleStoryLayer(this);"/><label for="title-story-layer">Title &amp; story</label></a></li>
+                <li><a class="dropdown-item" href="#"><input id="water-layer" type="checkbox" value="Water" checked onclick="showWaterLayer(this);"/><label for="water-layer">Water</label></a></li>
+                <li><a class="dropdown-item" href="#"><input id="props-layer" type="checkbox" value="Props" checked onclick="showPropsLayer(this);"/><label for="props-layer">Props</label></a></li>
+                <li><a class="dropdown-item" href="#"><input id="corners-layer" type="checkbox" value="Corners" checked onclick="showCornersLayer(this);"/><label for="corners-layer">Corners</label></a></li>
+                <li><a class="dropdown-item" href="#"><input id="shadow-layer" type="checkbox" value="Shadow" checked onclick="showShadowLayer(this);"/><label for="shadow-layer">Shadow</label></a></li>
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item" href="#"><label>Water level...</label></a></li>
+                <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#waterModal"><label>Water level...</label></a></li>
               </ul>
             </li>
           </ul>
@@ -169,14 +162,14 @@
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Export</a>
           <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="#" onclick="save_as_png();">Save as PNG</a></li>
+            <li><a class="dropdown-item" href="#" onclick="saveAsPng();">Save as PNG</a></li>
             <li>
               <a class="dropdown-item has-submenu" href="#">Export as</a>
               <ul class="submenu dropdown-menu">
                 <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#expPngModal">PNG...</a></li>
-                <li><a class="dropdown-item" href="#" onclick="export_as_svg();">SVG</a></li>
-                <li><a class="dropdown-item" href="#" onclick="export_as_json();">JSON</a></li>
-                <li><a class="dropdown-item" href="#" onclick="export_as_vox();">VOX</a></li>
+                <li><a class="dropdown-item" href="#" onclick="exportAsSvg();">SVG</a></li>
+                <li><a class="dropdown-item" href="#" onclick="exportAsJson();">JSON</a></li>
+                <li><a class="dropdown-item" href="#" onclick="exportAsVox();">VOX</a></li>
               </ul>
             </li>
           </ul>
@@ -238,7 +231,7 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-primary" onclick="export_as_png($('#exp-cell-size').val());">OK</button>
+        <button type="button" class="btn btn-primary" onclick="exportAsPng($('#exp-cell-size').val());">OK</button>
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
       </div>
     </div>
@@ -274,35 +267,35 @@
             <div class="tab-pane fade container p-2 show active" id="colors-panel" role="tabpanel" aria-labelledby="colors-tab">
               <div class="align-items-center g-1 row row-cols-3">
                 <div class="col-3">Ink</div>
-                <div class="col"><input type="text" class="form-control form-control-sm" id="style-ink-color" aria-label="Ink" value=""></div>
-                <div class="col"><input type="color" class="form-control form-control-color form-control-plaintext form-control-sm w-25" data-bs-target="#style-ink-color"></div>
+                <div class="col"><input type="text" class="form-control form-control-sm" id="style-color-ink" aria-label="Ink" value=""></div>
+                <div class="col"><input type="color" class="form-control form-control-color form-control-plaintext form-control-sm w-25" data-bs-target="#style-color-ink"></div>
                 <div class="col-3">Shading</div>
-                <div class="col"><input type="text" class="form-control form-control-sm" id="style-shading-color" aria-label="Shading" value=""></div>
-                <div class="col"><input type="color" class="form-control form-control-color form-control-plaintext form-control-sm w-25" data-bs-target="#style-shading-color"></div>
+                <div class="col"><input type="text" class="form-control form-control-sm" id="style-color-shading" aria-label="Shading" value=""></div>
+                <div class="col"><input type="color" class="form-control form-control-color form-control-plaintext form-control-sm w-25" data-bs-target="#style-color-shading"></div>
                 <div class="col-3">Water</div>
-                <div class="col"><input type="text" class="form-control form-control-sm" id="style-water-color" aria-label="Water" value=""></div>
-                <div class="col"><input type="color" class="form-control form-control-color form-control-plaintext form-control-sm w-25" data-bs-target="#style-water-color"></div>
+                <div class="col"><input type="text" class="form-control form-control-sm" id="style-color-water" aria-label="Water" value=""></div>
+                <div class="col"><input type="color" class="form-control form-control-color form-control-plaintext form-control-sm w-25" data-bs-target="#style-color-water"></div>
                 <div class="col-3">Floor</div>
-                <div class="col"><input type="text" class="form-control form-control-sm" id="style-floor-color" aria-label="Floor" value=""></div>
-                <div class="col"><input type="color" class="form-control form-control-color form-control-plaintext form-control-sm w-25" data-bs-target="#style-floor-color"></div>
+                <div class="col"><input type="text" class="form-control form-control-sm" id="style-color-floor" aria-label="Floor" value=""></div>
+                <div class="col"><input type="color" class="form-control form-control-color form-control-plaintext form-control-sm w-25" data-bs-target="#style-color-floor"></div>
                 <div class="col-3">Paper</div>
-                <div class="col"><input type="text" class="form-control form-control-sm" id="style-paper-color" aria-label="Paper" value=""></div>
-                <div class="col"><input type="color" class="form-control form-control-color form-control-plaintext form-control-sm w-25" data-bs-target="#style-paper-color"></div>
+                <div class="col"><input type="text" class="form-control form-control-sm" id="style-color-paper" aria-label="Paper" value=""></div>
+                <div class="col"><input type="color" class="form-control form-control-color form-control-plaintext form-control-sm w-25" data-bs-target="#style-color-paper"></div>
               </div>
             </div>
             <div class="tab-pane fade container p-2" id="stokes-panel" role="tabpanel" aria-labelledby="stokes-tab">
               <div class="align-items-center g-1 row row-cols-3">
                 <div class="col-3">Thin</div>
-                <div class="col"><input type="number" class="form-control form-control-sm" id="style-thin-stroke" aria-label="Thin" min="0" value=""></div>
+                <div class="col"><input type="number" class="form-control form-control-sm" id="style-stroke-thin" aria-label="Thin" min="0.1" max="4" value=""></div>
                 <div class="col"></div>
                 <div class="col-3">Hatching</div>
-                <div class="col"><input type="number" class="form-control form-control-sm" id="style-hatching-stroke" aria-label="Hatching" min="0" value=""></div>
+                <div class="col"><input type="number" class="form-control form-control-sm" id="style-stroke-hatch" aria-label="Hatching" min="0.1" max="4" value=""></div>
                 <div class="col"></div>
                 <div class="col-3">Normal</div>
-                <div class="col"><input type="number" class="form-control form-control-sm" id="style-normal-stroke" aria-label="Normal" min="0" value=""></div>
+                <div class="col"><input type="number" class="form-control form-control-sm" id="style-stroke-normal" aria-label="Normal" min="0.1" max="4" value=""></div>
                 <div class="col"></div>
                 <div class="col-3">Thick</div>
-                <div class="col"><input type="number" class="form-control form-control-sm" id="style-thick-stroke" aria-label="Thick" min="0" value=""></div>
+                <div class="col"><input type="number" class="form-control form-control-sm" id="style-stroke-thick" aria-label="Thick" min="0.1" max="4" value=""></div>
                 <div class="col"></div>
               </div>
             </div>
@@ -312,29 +305,29 @@
                 <div class="col"><input type="text" class="form-control form-control-sm" id="style-shadow-color" aria-label="Color" value=""></div>
                 <div class="col"><input type="color" class="form-control form-control-color form-control-plaintext form-control-sm w-25" data-bs-target="#style-shadow-color"></div>
                 <div class="col-3">Distance</div>
-                <div class="col"><input type="number" class="form-control form-control-sm" id="style-shadow-distance" aria-label="Distance" min="0" value=""></div>
+                <div class="col"><input type="number" class="form-control form-control-sm" id="style-shadow-dist" aria-label="Distance" min="0.1" max="0.5" value=""></div>
               </div>
             </div>
             <div class="tab-pane fade container p-2" id="hatching-panel" role="tabpanel" aria-labelledby="hatching-tab">
               <div class="align-items-center g-1 row row-cols-3">
                 <div class="col-3">Mode</div>
                 <div class="col">
-                  <select class="form-select form-select-sm" id="style-thin-stroke" aria-label="Mode">
-                    <option value="default" selected>Default</option>
-                    <option value="stonework">Stonework</option>
-                    <option value="bricks">Bricks</option>
-                    <option value="none">None</option>
+                  <select class="form-select form-select-sm" id="style-hatch-style" aria-label="Mode">
+                    <option value="Default" selected>Default</option>
+                    <option value="Stonework">Stonework</option>
+                    <option value="Bricks">Bricks</option>
+                    <option value="None">None</option>
                   </select>
                 </div>
                 <div class="col"></div>
                 <div class="col-3">Stokes</div>
-                <div class="col"><input type="number" class="form-control form-control-sm" id="style-hatching-stroke2" aria-label="Stokes" min="0" value=""></div>
+                <div class="col"><input type="number" class="form-control form-control-sm" id="style-hatch-stroke" aria-label="Stokes" min="2" max="5" value=""></div>
                 <div class="col"></div>
                 <div class="col-3">Size</div>
-                <div class="col"><input type="number" class="form-control form-control-sm" id="style-hatching-size" aria-label="Size" min="0" value=""></div>
+                <div class="col"><input type="number" class="form-control form-control-sm" id="style-hatch-size" aria-label="Size" min="0.1" max="1.0" value=""></div>
                 <div class="col"></div>
                 <div class="col-3">Distance</div>
-                <div class="col"><input type="number" class="form-control form-control-sm" id="style-hatching-distance" aria-label="Distance" min="0" value=""></div>
+                <div class="col"><input type="number" class="form-control form-control-sm" id="style-hatch-dist" aria-label="Distance" min="0.1" max="1.0" value=""></div>
                 <div class="col"></div>
               </div>
             </div>
@@ -342,19 +335,19 @@
               <div class="align-items-center g-1 row row-cols-3">
                 <div class="col-3">Title</div>
                 <div class="col-7"><input type="text" class="form-control form-control-sm" id="style-title-font" aria-label="Title" value=""></div>
-                <div class="col-2"><input type="number" class="form-control form-control-sm" id="style-title-font-size" min="0"></div>
+                <div class="col-2"><input type="number" class="form-control form-control-sm" id="style-font-size-title" min="0"></div>
                 <div class="col-3">Story</div>
                 <div class="col-7"><input type="text" class="form-control form-control-sm" id="style-story-font" aria-label="Story" value=""></div>
-                <div class="col-2"><input type="number" class="form-control form-control-sm" id="style-story-font-size" min="0"></div>
+                <div class="col-2"><input type="number" class="form-control form-control-sm" id="style-font-size-story" min="0"></div>
                 <div class="col-3">Notes</div>
                 <div class="col-7"><input type="text" class="form-control form-control-sm" id="style-notes-font" aria-label="Notes" value=""></div>
-                <div class="col-2"><input type="number" class="form-control form-control-sm" id="style-notes-font-size" min="0"></div>
+                <div class="col-2"><input type="number" class="form-control form-control-sm" id="style-font-size-notes" min="0"></div>
                 <div class="col-3">Legend</div>
                 <div class="col-7"><input type="text" class="form-control form-control-sm" id="style-legend-font" aria-label="Legend" value=""></div>
-                <div class="col-2"><input type="number" class="form-control form-control-sm" id="style-legend-font-size" min="0"></div>
+                <div class="col-2"><input type="number" class="form-control form-control-sm" id="style-font-size-legend" min="0"></div>
                 <div class="col-3">Symbols</div>
                 <div class="col-7"><input type="text" class="form-control form-control-sm" id="style-symbols-font" aria-label="Symbols" value=""></div>
-                <div class="col-2"><input type="number" class="form-control form-control-sm" id="style-symbols-font-size" min="0"></div>
+                <div class="col-2"><input type="number" class="form-control form-control-sm" id="style-font-size-symbols" min="0"></div>
               </div>
             </div>
           </div>
@@ -362,15 +355,37 @@
         <div class="col-2 d-flex flex-column gap-1 ps-0">
           <button class="btn btn-sm btn-primary dropdown-toggle" type="button" id="presetOpts" data-bs-toggle="dropdown" aria-expanded="false">Preset</button>
           <ul class="dropdown-menu" aria-labelledby="presetOpts">
-            <li><a class="dropdown-item" href="#" onclick="load_preset_style('default');">Default</a></li>
-            <li><a class="dropdown-item" href="#" onclick="load_preset_style('ancient');">Ancient</a></li>
-            <li><a class="dropdown-item" href="#" onclick="load_preset_style('blackboard');">Blackboard</a></li>
-            <li><a class="dropdown-item" href="#" onclick="load_preset_style('modern');">Modern</a></li>
+            <li><a class="dropdown-item" href="#" onclick="loadPresetStyle('default');">Default</a></li>
+            <li><a class="dropdown-item" href="#" onclick="loadPresetStyle('ancient');">Ancient</a></li>
+            <li><a class="dropdown-item" href="#" onclick="loadPresetStyle('blackboard');">Blackboard</a></li>
+            <li><a class="dropdown-item" href="#" onclick="loadPresetStyle('modern');">Modern</a></li>
           </ul>
           <button class="btn btn-sm btn-primary" type="button" onclick="loadMapStyle()">Load</button>
           <button class="btn btn-sm btn-primary" type="button" onclick="saveMapStyle()">Save</button>
           <button class="btn btn-sm btn-primary" type="button" onclick="applyMapStyle()">Apply</button>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal fade" id="waterModal" tabindex="-1" aria-labelledby="waterModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="waterModalLabel">Water level</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body container">
+        <div class="align-items-center g-2 row row-cols-2">
+          <div class="col-11">
+            <input type="range" class="form-range" id="water-level" min="0" max="100" step="10" oninput="onWaterLevelChanged(this);">
+          </div>
+          <div class="col-1"><span id="water-level-output"></span></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="cacheWaterLevel();">OK</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="resetWaterLevel();">Cancel</button>
       </div>
     </div>
   </div>
@@ -383,38 +398,260 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-fontpicker/1.5/jquery.fontpicker.min.js" integrity="sha512-x1EmGH1DcQPP0ICawrFLwTcl3XualoQYxX+2k2hD1RnfnlfP1JMvAktqLGaKw2WxXKZnpo92/0Nk1eKENydFxA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="map-generator.js" type="text/javascript" charset="utf-8"></script>
 <script type="text/javascript">
-  function collapseNavBarForSmallerScreen() {
-      // close all inner dropdowns when parent is closed
-      $('.navbar .dropdown').on('hidden.bs.dropdown', function() {
-        $(this).find('.submenu').hide();
-      });
-      
-      $('.dropdown-menu a').click(function(e) {
-        let nextOne = $(this).next();
-        if(nextOne && nextOne.hasClass('submenu')) {  
-          // prevent opening link if link needs to open dropdown
-          e.preventDefault();
-          nextOne.toggle();
-        }
-      });
+var gMapGenerator;
+
+function onWaterLevelChanged(dom) {
+  let val = $(dom).val();
+  $('#water-level-output').html(val);
+  gMapGenerator.setFloodLevel(val / 10);
+}
+
+function cacheWaterLevel() {
+  let input = $('#water-level');
+  input.data('org-val', input.val());
+}
+
+function resetWaterLevel() {
+  let input = $('#water-level');
+  let orgVal = input.data('org-val');
+  if (orgVal != input.val()) {
+    input.val(orgVal);
+    input.trigger('input');
+  }
+}
+
+function collapseNavBarForSmallerScreen() {
+  // close all inner dropdowns when parent is closed
+  $('.navbar .dropdown').on('hidden.bs.dropdown', function() {
+    $(this).find('.submenu').hide();
+  });
+  
+  $('.dropdown-menu a').click(function(e) {
+    let nextOne = $(this).next();
+    if(nextOne && nextOne.hasClass('submenu')) {  
+      // prevent opening link if link needs to open dropdown
+      e.preventDefault();
+      nextOne.toggle();
+    }
+  });
+}
+
+function generateDungeon() {
+  gMapGenerator.newDungeon();
+}
+
+function generate_with_selected_tags() {
+  console.log('generate_with_selected_tags');
+}
+
+function generate_with_random_tags() {
+  console.log('generate_with_random_tags');
+}
+
+function rerollNotes() {
+  gMapGenerator.rerollNotes();
+}
+
+function rearrangeNotes() {
+  gMapGenerator.rearrangeNotes();
+}
+
+function setNotesMode(mode) {
+  let menuRerollNotes = $('#menu-reroll-notes');
+  let menuRearrangeNotes = $('#menu-rearrange-notes');
+  switch (mode) {
+    case 'off':
+      menuRerollNotes.hide();
+      menuRearrangeNotes.hide();
+      gMapGenerator.setNotesMode(NoteViewMode_HIDDEN);
+      break;
+    case 'tailed':
+      menuRerollNotes.show();
+      menuRearrangeNotes.show();
+      gMapGenerator.setNotesMode(NoteViewMode_TAILED);
+      break;
+    case 'legend':
+      menuRerollNotes.show();
+      menuRearrangeNotes.hide();
+      gMapGenerator.setNotesMode(NoteViewMode_LEGEND);
+      break;
+    case 'numbers':
+      menuRerollNotes.hide();
+      menuRearrangeNotes.hide();
+      gMapGenerator.setNotesMode(NoteViewMode_SYMBOLS);
+      break;
+    case 'default':
+    default:
+      menuRerollNotes.show();
+      menuRearrangeNotes.show();
+      gMapGenerator.setNotesMode(NoteViewMode_NORMAL);
+      break;
+  }
+}
+
+function rotateToFit(dom) {
+  gMapGenerator.rotateMap(dom.checked);
+}
+
+function showSecretRooms(dom) {
+  gMapGenerator.showSecrets(dom.checked);
+}
+
+function showMonochrome(dom) {
+  gMapGenerator.showBlackAndWhite(dom.checked);
+}
+
+function setGridMode(mode) {
+  switch (mode) {
+    case 'off':
+      gMapGenerator.setGridMode(GridType_HIDDEN);
+      break;
+    case 'dashed':
+      gMapGenerator.setGridMode(GridType_DASHED);
+      break;
+    case 'solid':
+      gMapGenerator.setGridMode(GridType_SOLID);
+      break;
+    case 'dotted':
+    default:
+      gMapGenerator.setGridMode(GridType_DOTTED);
+      break;
+  }
+}
+
+function showTitleStoryLayer(dom) {
+  gMapGenerator.showTitle(dom.checked);
+}
+
+function showWaterLayer(dom) {
+  gMapGenerator.showWater(dom.checked);
+}
+
+function showPropsLayer(dom) {
+  gMapGenerator.showProps(dom.checked);
+}
+
+function showCornersLayer(dom) {
+  gMapGenerator.showCorners(dom.checked);
+}
+
+function showShadowLayer(dom) {
+  gMapGenerator.showShadow(dom.checked);
+}
+
+function saveAsPng() {
+  gMapGenerator.savePNG();
+}
+
+function exportAsPng(cellSize) {
+  console.log('exportAsPng:' + cellSize);
+}
+
+function exportAsSvg() {
+  gMapGenerator.exportSVG();
+}
+
+function exportAsJson() {
+  gMapGenerator.exportJSON();
+}
+
+function exportAsVox() {
+  gMapGenerator.exportVOX();
+}
+
+function loadPresetStyle(name) {
+  let style = {};
+  switch (name) {
+    case 'ancient':
+      style = PresetStyle_ANCIENT;
+      break;
+    case 'blackboard':
+      style = PresetStyle_BLACKBOARD;
+      break;
+    case 'modern':
+      style = PresetStyle_MODERN;
+      break;
+    case 'default':
+    default:
+      style = PresetStyle_DEFAULT;
+      break;
+  }
+  gMapGenerator.loadPresetStyle(style);
+  updateStyleDialog(style);
+}
+
+function loadMapStyle() {
+  console.log('loadMapStyle');
+}
+
+function saveMapStyle() {
+  console.log('saveMapStyle');
+}
+
+function applyMapStyle() {
+  console.log('applyMapStyle');
+}
+
+function updateStyleDialog(style) {
+  [['style-color-ink', style.colorInk],
+   ['style-color-shading', style.colorShading],
+   ['style-color-water', style.colorWater],
+   ['style-color-floor', style.colorBg],
+   ['style-color-paper', style.colorPaper],
+   ['style-shadow-color', style.shadowColor]].forEach(([id, color]) => {
+    $(`#${id}`).val(color);
+    $(`input[data-bs-target="#${id}"]`).val(color);
+   });
+  [['style-stroke-thin', style.strokeThin],
+   ['style-stroke-hatch', style.strokeHatching],
+   ['style-stroke-normal', style.strokeNormal],
+   ['style-stroke-thick', style.strokeThick],
+   ['style-shadow-dist', style.shadowDist],
+   ['style-hatch-style', style.hatchingStyle],
+   ['style-hatch-stroke', style.hatchingStrokes],
+   ['style-hatch-size', style.hatchingSize],
+   ['style-hatch-dist', style.hatchingDistance],
+   ['style-font-size-title', style.fontTitle.size],
+   ['style-font-size-story', style.fontStory.size],
+   ['style-font-size-notes', style.fontNotes.size],
+   ['style-font-size-legend', style.fontLegend.size],
+   ['style-font-size-symbols', style.fontSymbols.size]].forEach(([id, val]) => $(`#${id}`).val(val));
+  [['style-title-font', style.fontTitle],
+   ['style-story-font', style.fontStory],
+   ['style-notes-font', style.fontNotes],
+   ['style-legend-font', style.fontLegend],
+   ['style-symbols-font', style.fontSymbols]].forEach(([id, font]) => {
+    let val = font.face || 'Verdana';
+    val += ':' + (font.weight || 400);
+    if (font.italic) {
+      val += 'i';
+    }
+    $(`#${id}`).val(val).change();
+   });
+}
+
+$(document).ready(function() {
+  /* Prevent closing from click inside dropdown */
+  $('.dropdown-menu').click(function(e) {
+    e.stopPropagation();
+  });
+
+  if (window.innerWidth < 992) {
+    collapseNavBarForSmallerScreen();
   }
 
-  $(document).ready(function() {
-    /* Prevent closing from click inside dropdown */
-    $('.dropdown-menu').click(function(e) {
-      e.stopPropagation();
-    });
+  let opts = {
+    localFontsUrl: '/Windows/Fonts/',
+    parentElement: '#styleModal'
+  }
+  $('#style-title-font').fontpicker(opts);
+  $('#style-story-font').fontpicker(opts);
+  $('#style-notes-font').fontpicker(opts);
+  $('#style-legend-font').fontpicker(opts);
+  $('#style-symbols-font').fontpicker(opts);
 
-    if (window.innerWidth < 992) {
-      collapseNavBarForSmallerScreen();
-    }
-
-    $('#style-title-font').fontpicker();
-    $('#style-story-font').fontpicker();
-    $('#style-notes-font').fontpicker();
-    $('#style-legend-font').fontpicker();
-    $('#style-symbols-font').fontpicker();
-  });
+  gMapGenerator = new MapGenerator();
+});
 </script>
 </body>
 </html>
