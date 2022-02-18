@@ -1,6 +1,9 @@
 # Map Generator
 
-This is a procedural dungeon generator written in JavaScript. This utility is rewritten from [Dungeon Generator](https://github.com/domasx2/dungeon-generator/).
+This is a procedural dungeon generator written in JavaScript. This utility is rewritten from the following projects:
+
+1. [Dungeon Generator](https://github.com/domasx2/dungeon-generator/).
+2. [watabou's One Page Dungeon](https://watabou.itch.io/one-page-dungeon).
 
 [Live demo](http://blackmonkey.github.io/map-generator/)
 
