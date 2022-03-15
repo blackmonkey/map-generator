@@ -29,6 +29,8 @@ This tool works with the following libraries. So, make sure you load them before
 - [jQuery](https://jquery.com/)
 - [Fontpicker jQuery Plugin](https://github.com/av01d/fontpicker-jquery-plugin)
 - [jQuery MiniColors](https://github.com/claviska/jquery-minicolors)
+- [Paper.js](http://paperjs.org/)
+- [Tracery](https://github.com/galaxykate/tracery)
 
 With a copy on your server:
 ```html
@@ -37,6 +39,8 @@ With a copy on your server:
 <script src="/path/to/dist/jquery.min.js"></script>
 <script src="/path/to/dist/jquery.fontpicker.min.js"></script>
 <script src="/path/to/dist/jquery.minicolors.min.js"></script>
+<script src="/path/to/dist/paper-core.min.js"></script>
+<script src="/path/to/dist/tracery.min.js"></script>
 <script src="/path/to/dist/map-generator.js"></script>
 ```
 
@@ -47,6 +51,8 @@ You can also load it from cdnjs:
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js" type="text/javascript" charset="utf-8"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-fontpicker/1.5/jquery.fontpicker.min.js" integrity="sha512-x1EmGH1DcQPP0ICawrFLwTcl3XualoQYxX+2k2hD1RnfnlfP1JMvAktqLGaKw2WxXKZnpo92/0Nk1eKENydFxA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-minicolors/2.3.6/jquery.minicolors.min.js" integrity="sha512-vBqPkpOdZM0O7YezzE8xaoUdyt4Z2d+gLrY0AMvmNPLdLuNzvreTopyuaM9/FiRzHs1bwWzYDJgH6STcuNXpqg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/paper.js/0.12.15/paper-core.min.js" integrity="sha512-n8kxMM6jgawwNHl1HJmOXz+l8bMYaq0SrYrbCijlUnUUNXuD4ajzKmdXSTFarH3PViz54jfiSNUUAfTOhIDmRg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdn.jsdelivr.net/gh/galaxykate/tracery@master/js/tracery.min.js" type="text/javascript"></script>
 <script src="/TODO/map-generator.js"></script>
 ```
 

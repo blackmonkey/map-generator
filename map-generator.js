@@ -18,7 +18,7 @@ const PresetMapStyle_DEFAULT = {
   strokeThin: 0.5,
   strokeHatching: 0.8,
   strokeNormal: 1.5,
-  strokeThick: 3.0,
+  strokeThick: 3,
   shadowColor: '#CCCCCCFF',
   shadowDist: 0.2,
   hatchingStyle: 'Default',
@@ -65,7 +65,7 @@ const PresetMapStyle_ANCIENT = {
   strokeThin: 0.5,
   strokeHatching: 0.5,
   strokeNormal: 1.5,
-  strokeThick: 3.0,
+  strokeThick: 3,
   shadowColor: '#B2A097FF',
   shadowDist: 0.4,
   hatchingStyle: 'Stonework',
@@ -110,9 +110,9 @@ const PresetMapStyle_BLACKBOARD = {
   colorBg: '#333333FF',
   colorPaper: '#222222FF',
   strokeThin: 0.5,
-  strokeHatching: 1.0,
+  strokeHatching: 1,
   strokeNormal: 1.5,
-  strokeThick: 3.0,
+  strokeThick: 3,
   shadowColor: '#A9A0B2FF',
   shadowDist: 0.3,
   hatchingStyle: 'Default',
@@ -158,8 +158,8 @@ const PresetMapStyle_MODERN = {
   colorPaper: '#FFFFFFFF',
   strokeThin: 0.5,
   strokeHatching: 0.5,
-  strokeNormal: 1.0,
-  strokeThick: 2.0,
+  strokeNormal: 1,
+  strokeThick: 2,
   shadowColor: '#FFFFFFFF',
   shadowDist: 0.1,
   hatchingStyle: 'Bricks',
@@ -245,12 +245,4380 @@ const MapStyle_EMPTY = {
   }
 };
 
+const Dot_UP = new paper.Point(0, -1);
+const Dot_DOWN = new paper.Point(0, 1);
+const Dot_LEFT = new paper.Point(-1, 0);
+const Dot_RIGHT = new paper.Point(1, 0);
+
+const TAG_ANCHORS = {
+  'abbey': ['dwelling', 'large', 'secret', 'temple'],
+  'archive': ['compact', 'large', 'ordered', 'round'],
+  'asylum': ['compact', 'dangerous', 'dwelling', 'square'],
+  'basilica': ['colonnades', 'compact', 'ordered', 'square'],
+  'catacombs': ['chaotic', 'dangerous', 'large', 'wet'],
+  'chambers': ['dwelling'],
+  'chaos': ['chaotic'],
+  'chapel': ['compact', 'small', 'temple'],
+  'crypt': ['cramped', 'tomb'],
+  'desert': ['dry'],
+  'dungeon': ['chaotic', 'dangerous', 'secret'],
+  'emperor': ['dwelling'],
+  'frozen': ['dry'],
+  'hall': ['chaotic', 'dwelling', 'small', 'spacious'],
+  'halls': ['chaotic', 'dwelling', 'large', 'spacious'],
+  'house': ['compact', 'dwelling', 'secret', 'small', 'square'],
+  'king': ['dwelling'],
+  'labyrinth': ['large', 'winding'],
+  'lair': ['chaotic', 'dangerous', 'treasure', 'winding'],
+  'library': ['compact', 'large', 'ordered', 'round'],
+  'manor': ['dwelling'],
+  'mansion': ['dwelling'],
+  'mausoleum': ['cramped', 'tomb'],
+  'maze': ['chaotic', 'colonnades', 'dangerous', 'winding'],
+  'monastery': ['dwelling', 'large', 'temple'],
+  'mountain': ['crumbling'],
+  'observatory': ['compact', 'round'],
+  'palace': ['colonnades', 'dwelling', 'large', 'ordered', 'treasure'],
+  'prison': ['compact', 'dangerous', 'dwelling', 'large', 'square'],
+  'pyramid': ['ordered', 'square', 'tomb'],
+  'queen': ['dwelling'],
+  'ruined': ['crumbling'],
+  'sanctum': ['colonnades', 'temple'],
+  'sepulcher': ['tomb'],
+  'shattered': ['crumbling'],
+  'shrine': ['temple'],
+  'subterranean': ['crumbling'],
+  'sunken': ['flooded'],
+  'swamp': ['wet'],
+  'temple': ['colonnades', 'large', 'ordered', 'round', 'spacious', 'temple'],
+  'tomb': ['colonnades', 'tomb'],
+  'undead': ['tomb'],
+  'undeground': ['crumbling'],
+  'underwater': ['flooded'],
+  'vampire': ['tomb'],
+  'vault': ['secret', 'treasure'],
+};
+const TAG_INFOS = {
+  'chaotic': 'No symmetry',
+  'colonnades': 'More colonnades',
+  'compact': 'No corridors',
+  'cramped': 'Small rooms',
+  'crumbling': 'More cracks and rubble',
+  'dangerous': 'More dead bodies',
+  'dry': 'No water',
+  'dwelling': 'A throne at the last room, more wells and tapestries',
+  'flooded': 'Much water',
+  'large': 'Larger dungeon',
+  'multi-level': 'Stairs down at the last room',
+  'ordered': 'More symmetry',
+  'round': 'More round rooms',
+  'secret': 'More secret rooms',
+  'small': 'Smaller dungeon',
+  'spacious': 'More large rooms',
+  'square': 'No round rooms',
+  'temple': 'Some altars',
+  'tomb': 'Some coffins, fewer fountains',
+  'treasure': 'More valuable or exotic loot',
+  'wet': 'Some water',
+  'winding': 'More corridors',
+}
+const TAG_EXCEPTIONS = [
+  ['chaotic', 'ordered'],
+  ['winding', 'compact'],
+  ['cramped', 'spacious'],
+  ['large', 'small'],
+  ['round', 'square'],
+  ['dry', 'wet', 'flooded']
+];
+
+const STORY_SPELL_BOOK = {
+  'dramaticEntity' : ['#dramaticNoun#', '#dungName1# #symbol#'],
+  'dramaticNoun' : [
+    'Ash', 'Bones', 'Chaos', 'Darkness', 'Death', 'Doom', 'Dreams', 'Evil', 'Fate', 'Madness',
+    'Secrets', 'Shadows', 'Sorrows', 'Tears', 'Terror', 'Void', 'Blood', 'Reflection', 'Twilight',
+    'Thunder', 'Fear', 'Spirits', 'Sorrows', 'Pain', 'Fire', 'Illusions', 'Embers', 'Blades',
+    'Ghosts', 'Sky', 'Deep'
+  ],
+  'symbol' : [
+    'cross', 'skull', 'moon', 'star', 'eye', 'arrow', 'fish', 'crown', 'bat', 'heart', 'bird',
+    'lily', 'leaf', 'palm', 'claw', 'seashell', 'snail', 'fist'
+  ],
+  'native' : ['#race#'],
+  'raider' : [
+    'orc', 'goblin', 'hobgoblin', 'kobold', 'gnoll', 'pirate', 'bandit', 'cultist', 'thug', 'ogre'
+  ],
+  'creature' : ['#race#', '#animal#', '#raider#', '#native#'],
+  'enemy' : ['#native#', '#raider#'],
+  'person' : ['#race#', '#native#', '#raider#', '#npc_class#'],
+  'race' : ['human', 'elf', 'dwarf', 'halfling', 'gnome'],
+  'animal' : [
+    'snake', 'lizard', 'spider', 'rabbit', 'cat', 'bear', 'lion', 'sparrow', 'turtle', 'wasp',
+    'mammoth', 'goat', 'rat', 'chicken', 'boar', 'wolf', 'crow', 'rhino', 'eagle', 'owl',
+    'scorpion', 'ant', 'pig', 'ape', 'pigeon', 'worm', 'bat', 'centipede', 'monkey',
+    'were#animal#', 'beast', 'WATER?-seal', 'WATER?-octopus', 'WATER?-alligator', 'WATER?-shark',
+    'WATER?-piranha'],
+  'monster' : [
+    'dragon', 'basilisk', 'manticore', 'beholder', 'sphinx', 'chimera', 'hydra', 'wyvern', 'wyrm'
+  ],
+  'beast' : ['#monster_adj# #animal#', '#monster#'],
+  'monster_adj' : [
+    'venomous', 'mutant', 'man-eating', 'albino', 'blood-sucking', 'soul-{eating|sucking}',
+    'intelligent', 'fire-breathing', 'invisible'
+  ],
+  'north' : ['to the north', 'on the northern wall{ of the #room#}'],
+  'south' : ['to the south', 'on the southern wall{ of the #room#}'],
+  'east' : ['to the east', 'on the eastern wall{ of the #room#}'],
+  'west' : ['to the west', 'on the western wall{ of the #room#}'],
+  'color' : ['red', 'yellow', 'green', 'blue', 'purple', 'black', 'white'],
+  'loot' : [
+    '#loot_container#', '#loot_container#', '#loot_ground#', '#loot_corpse#', '#loot_display#',
+    'TREASURE?-#loot_display#', 'TREASURE?-#loot_display#', 'DANGEROUS?-#loot_corpse#',
+    'DANGEROUS?-#loot_corpse#', 'CRUMBLING?-#loot_ground#', 'CRUMBLING?-#loot_ground#'
+  ],
+  'loot_container' : [
+    '#container.a.capitalize# containing #treasure#.',
+    '#container.a.capitalize# with #treasure#{ in it}.',
+    '#treasure.capitalize# in #container.a#.',
+    '#container.a.capitalize# holds #treasure#.'
+  ],
+  'loot_ground' : [
+    '#treasure.capitalize# among rubble on the ground.',
+    '#treasure.capitalize# hidden in a {crack|crevice} of the {wall|floor}.',
+    '#treasure.capitalize# tucked under some debris.',
+    'A {{giant|large} }pile of rubble hides #treasure#.',
+    'WATER?-#treasure.capitalize# at the bottom of a {small }pool.',
+    'DWELLING?-#treasure.capitalize# under pieces of broken furniture.',
+    'DWELLING?-A wall panel conceals #treasure#.'
+  ],
+  'loot_corpse' : [
+    'A corpse of #person.a#, #treasure# #nearby#.',
+    'A dying #person#, #treasure# among his belongings.',
+    'Remains of #person.a#{ apparently killed by #creature.s#}, #treasure# {clutched }in his hands.',
+    '#body_state.a.capitalize# body of #person.a#, #treasure# #nearby#.'
+  ],
+  'loot_display' : [
+    'A {lifelike }{statue|sculpture} of #native.a#{ #npc_class#}, #special_item# in its hands.',
+    'A stuffed #race#{ #npc_class#} with #special_item# in their hands.',
+    '#special_item.capitalize# in a {magically locked |shattered |glass |}{display|trophy|curio} case.',
+    '#special_item.capitalize# on a pedestal{ table}.',
+    '#special_item.capitalize# locked in a {magical |mechanical | }safe.',
+    '#special_item.capitalize# in the middle of a {pentagram|circle of runes} on the ground.',
+    '#special_item.capitalize# hovering in the middle of the #room#.',
+    'TEMPLE?-#special_item.capitalize# on an altar.'
+  ],
+  'special_item' : '{#magic_item#|#mystery_item#}',
+  'nearby' : ['nearby', 'close to it', 'close by'],
+  'body_state' : [
+    'decapitated', 'incenerated', 'petrified', 'mutilated', '{mold|ooze|slime}-covered',
+    'half-eaten', '{fungus|moss|ivy|lichen}-covered', 'crystalized', 'still warm', 'desiccated',
+    'skinless', 'jellyfied', 'frozen'
+  ],
+  'container' : '{#container_adj# }#container_noun#',
+  'container_noun' : [
+    'chest', 'chest', 'chest', 'crate', 'crate', 'box', 'trunk', 'basket', 'TOMB?-coffin',
+    'TOMB?-sarcophagus', 'locker', 'strongbox'
+  ],
+  'container_adj' : ['medium', 'large', 'battered', 'reinforced', 'broken', 'rotten'],
+  'treasure' : ['#loot_item#', '#loot_list# and #loot_item#', '#treasure_item#'],
+  'loot_list' : ['#loot_item#', '#loot_item#', '#loot_item#', '#loot_list#, #loot_item#'],
+  'loot_item' : ['some gold', '#weapon.a#', '#armor.a#', '#gear#'],
+  'weapon' : '{#weapon_adj# }#weapon_noun#',
+  'weapon_noun' : [
+    'sword', 'axe', 'dagger', 'spear', 'mace', 'hammer', 'spear', 'flail', 'rapier', 'halberd',
+    'long sword', 'katana', 'glaive', 'sword', 'staff'
+  ],
+  'weapon_adj' : [
+    'rusty', 'enchanted', 'cursed', 'ornate', 'ancient', 'blood-stained', 'exotic', 'regular',
+    'vorpal'
+  ],
+  'armor' : [
+    'chainmail', 'leather armor', 'scale mail', 'breastplate', 'shield', 'helm', '{cloak|mantle}',
+    'scarf'
+  ],
+  'gear' : [
+    'candles', 'a crowbar', 'a flask of holy water', 'a lamp', 'a rope', 'rations', 'a torch',
+    'a healing potion', 'arrows', 'a bottle of wine', 'a map{ of the #dung_noun#}', 'lockpicks'
+  ],
+  'treasure_item' : [
+    'gems', '#jewelry_adj.a# #jewelry_noun#', '#magic_item#', '#mystery_item#'
+  ],
+  'jewelry_adj' : [
+    'silver', 'golden', '{carved }ivory', 'bronze', '{jeweled|jewel-encrusted}', 'magic'
+  ],
+  'jewelry_noun' : [
+    'statuette', 'bracelet', 'ring', 'ring', 'necklace', '{crown|tiara}', 'idol', 'brooch',
+    'chain', 'figurine', 'mirror', 'box', 'pin', 'chess piece', 'comb', 'mask', 'egg', 'dice',
+    'medallion'
+  ],
+  'magic_item' : '#magic_adj.a# #magic_noun#',
+  'magic_adj' : ['magic', 'magic', 'magic', 'eldritch', 'holy', 'unholy', 'enchanted'],
+  'magic_noun' : [
+    'staff', 'wand', 'rod', 'orb', 'ball', 'tarot deck', 'stone', 'horn', 'tome', 'doll', 'coin',
+    'gem', 'compass', 'cube', 'niddle', 'quill', 'flask', 'knife', 'cape', 'lamp', 'book', 'rod',
+    'scroll', 'amulet', 'blade', 'bow', 'lantern', 'relic', 'tablet', 'looking glass', 'censer',
+    'skull', '{spellbook|grimoire}', 'hourglass', 'flute', '#jewelry_noun#'
+  ],
+  'mystery_item' : '#mysterious_adj.a#, #mysterious_trait# {#magic_noun#|#weapon_noun#|#armor#|#jewelry_noun#|object}',
+  'mysterious_adj' : ['mysterious', 'strange', 'uncanny', 'weird'],
+  'mysterious_trait' : [
+    'covered with {glyphs|runes|hieroglyphs|carvings|sigils}', '{ice-cold|warm|sticky} to touch',
+    '{slightly }{vibrating|humming|glowing|sprakling|translucent}', 'unnaturally {light|heavy}',
+    'made of an unknown material', '{whispering|singing|bleeding|smoking|burning|vibrating}'
+  ],
+  'event' : ['#curiosity#', '#npc#', '#enviro#'],
+  'curiosity' : [
+    'A bottomless {well|pit}, #action# if a coin is dropped into it.',
+    'A {stone|iron|jeweled} throne, #action# when sat on.',
+    'A {simple|stone|wooden|blood-covered} altar, #action# when {the candles on it are lit|a sacrifice is made}.',
+    'A {dusty }{book|tome} on a lectern, #action# when opened.',
+    'A {mundane-looking|suspicious} door, #action# when the knob is touched.',
+    'A {burning }fire in a {brazier|fireplace}, #action# when touched.',
+    'A {pool|puddle} of {{dark|murky|clear} }water, #action# when drank from.',
+    'A fresco on the {ceiling|wall}, #action# when looked at.',
+    'A statue of a #creature#, #action# when touched.',
+    '{A brain|An eye|A heart} preserved in a jar, #action# when shaken.',
+    'A {rusty|ticking} {gearwork|clockwork} {machine|apparatus}, #action# when the lever is pulled.',
+    'The #room# is filled with {dense|swirly} {mist|fog|haze|vapour|smoke}. It #action# when {breathed in|inhaled}.',
+    'A {tapestry|mural|painting} on the wall, #action# when {brushed|examined}.',
+    'A {floor|wall} mirror, #action# when looked in.',
+    'A creepy doll, #action# when picked up.',
+    'An ornate {lantern|lamp}, #action# when lit.',
+    'An {intricate|impossible} puzzle, #action# when solved.',
+    'A skeleton on the ground, #action# if disturbed.',
+    'A {giant }stuffed #animal#, #action# when stroked.',
+    'An enormous {#color# }crystal, #action# if struck hard.'
+  ],
+  'action' : [
+    'ages a person', 'makes a person {slightly }{smaller|bigger}', 'puts a person to sleep',
+    'animates', 'turns into {dust|ashes}', 'tells a story of {this place|the #dung_noun#}',
+    'wails loudly', 'makes a person forget his name', 'heals a person', 'sounds the alarm',
+    'teleports a person outside the #dung_noun#', 'transforms a person into #creature.a#',
+    'turns a person to stone', 'answers one question', 'tells where a treasure is hidden',
+    'tells an unwanted truth', 'turns out to be a mimic', 'swears', 'pleads to be killed',
+    'spawns #special_item#', 'bursts into flames', 'drives a person mad',
+    'shows visions of the distant {past|future}', '{blinds|mutes|deafens} a person',
+    'allows a person to {breath under water|see in darkness|speak to the spirits}',
+    'makes a person {hallucinate|giggle|glow|cough|puke|hiccup}'
+  ],
+  'npc' : [
+    '#npc_desc.a.capitalize#, {sitting|lying|sleeping} {in a corner|on the ground}.',
+    '#npc_desc.a.capitalize#. #npc_desire.capitalize#.',
+    '#npc_desc.a.capitalize#, #npc_state#.'
+  ],
+  'npc_desc' : ['{#npc_trait# }{#npc_look# }{#npc_class#|#race#}', '#civilian#'],
+  'npc_class' : [
+    'bard', '{cleric|priest}', 'barbarian', 'knight', '{hunter|ranger}', '{thief|rogue}', 'wizard',
+    'monk', 'druid', 'warlock', 'artificer', 'shaman'
+  ],
+  'npc_trait': [
+    'charming', 'brash', 'suspicious', 'shy', 'fierce', 'arrogant', 'subtle', 'enigmatic', 'calm',
+    'cheerful', 'polite', 'sarcastic', 'creepy', 'cold', 'confident', 'mysterious', 'quiet'
+  ],
+  'npc_look' : [
+    'large', 'slim', 'short', 'bony', 'maimed', 'tall', 'rough', 'old', 'mute', 'pockmarked',
+    'young', 'stout', 'bearded', 'handsome', 'elegant', 'bald', 'scarred', 'tattoed', 'sad-eyed',
+    'dead-eyed', 'one-eyed', 'tanned', 'hooded', 'wild-haired', 'ugly', 'naked', 'long-haired',
+    'dark', 'rough', 'one-armed', 'well-dressed', 'blind'
+  ],
+  'npc_state' : [
+    'mortally wounded', 'slightly drunk', 'chained to the wall', '{tightly }tied to a stake',
+    'cooking over a campfire', 'apparently expecting you', 'standing over a killed #enemy#',
+    'lying in ambush', 'utterly surprised', 'trying to hide {something|#mystery_item#} behind their back',
+    'weak of starvation', 'shaking out of fear', 'lost and confused', 'eager to talk',
+    'muttering gibberish', 'looking sick', 'talking to an invisible friend',
+    'whistling tunelessly', 'checking the content of #container.a#', 'locked in a cage',
+    'examining #mystery_item#'
+  ],
+  'npc_desire' : [
+    'needs help to get out from the #dung_noun#', 'desperately needs help',
+    'claims to have a message for you', 'wants to join you',
+    'would like to join you for a reward', 'pleads to borrow #gear#',
+    'has #loot_item# for trade', 'has a quest for you',
+    'would like to hire you for a job', 'wants to pay you to get rid of #mystery_item#',
+    'can be convinced to help you in your mission'
+  ],
+  'civilian' : [
+    'child', 'teenager', 'girl', 'smith', 'travelling merchant', 'noble', 'old lady',
+    'artist', 'hooded figure', 'adventurer', 'old friend', 'villager', 'soldier', 'pilgrim',
+    '#raider#', '#race#'
+  ],
+  'enviro' : ['#enviro_walls#'],
+  'enviro_walls' : [
+    '#painting_depicting.capitalize#',
+    '#painting.a.capitalize#, totally destroyed by {fire|mold|#raider# vandals}.',
+    'A mosaic of #symbol.a# pattern on the {floor|walls|ceiling}',
+    '#writing.a.capitalize# on the {wall|0.5?-floor|0.1?-ceiling}{ painted in blood}: #sign.caps#'
+  ],
+  'painting_depicting' : [
+    '#painting.a# depicting a scene of #scene#.',
+    '#painting.a# depicting #depictedNPC#{ with #magic_noun.a# in one hand and a symbol of #symbol# in the other}.',
+    '#painting.a# depicting the {landscape|land|#location#} around the #dung_noun#{ as it looked in the distant past}.'
+  ],
+  'painting' : '{painting|tapestry|fresco|relief|{colorful }mosaic|graffiti|carving}{ on the wall}',
+  'scene' : [
+    'battle', 'wedding', 'sacrifice', 'hunt', 'celebration', 'ascension', 'execution', 'inauguration', 'siege'
+  ],
+  'writing' : ['sign', 'writing'],
+  'sign' : [
+    'the road of #dramaticNoun# leads to the palace of #dramaticNoun#',
+    "{beware of|don't pet} #animal.s#",
+    '#animal.s# are not what they seem',
+    '#native.s# {rule|suck|unite!|power}',
+    'death to #raider.s#',
+    'BOSS?-{beware of|all hail} #boss#{!}',
+    'BOSS?-#boss# {must die|lives|is back}',
+    'BOSS?-#boss# brings #dramaticNoun#',
+    '#[noun:#dramaticNoun#][_:#noun# #noun.is#]_# {#dramaticNoun#|coming}',
+    '{no more|embrace the} #dramaticNoun#',
+    '#demonicName#{ was here}',
+    'this {is the {best|worst} #dung_noun#|#dung_noun# is the {best|worst}}{ ever}',
+    'where {in hell }is my {{damned|bloody} }{#weapon#|#armor#}',
+    "it's not #dung_adj# if it's {not }#dung_adj#",
+    '{reveal|uncover} your {{inner }#dramaticNoun#|inner {#npc_class#|#animal#}}'
+  ],
+  'enviro_statue' : [
+    'A {crumbling }{stone|marble|granite} statue of #depictedNPC# {fighting|strangling|slaying|feeding|healing|talking to|blessing|sacrificing|confronting} #creature.a#.'
+  ],
+  'depictedNPC' :['BOSS?-#boss#', '#npc_look.a# #native#'],
+  'enviro_fire' : [
+    'A {crackling|cold|hot|magical|smoldering|roaring} fire is burning in #fireplace.a#.',
+    '#fireplace.a.capitalize# full of {ash|ashes|embers|cinders}.',
+    'A recently abandoned camp, {ashes are still warm|#treasure# {#nearby#|left in a hurry}}.'
+  ],
+  'fireplace' : ['fireplace', 'hearth'],
+  'gate_nokey' : '#gate_desc.a.capitalize# #dir#.',
+  'gate_onekey' : '#gate_desc.a.capitalize# with a keyhole #dir#.',
+  'gate_manykeys' : '#gate_desc.a.capitalize# with #num# keyholes #dir#.',
+  'gate_desc' : '#gate_adj# {#gate_material# }#gate_noun#',
+  'gate_noun' : ['door', 'gate', 'double door'],
+  'gate_adj' : ['large', 'huge', 'massive', 'notable', 'round', 'mouth-shaped', 'lavishly decorated', 'battered', 'scorched', 'great'],
+  'gate_material' : ['wooden', '{iron|ironclad|ironbound}', 'stone'],
+  'key' : ['{{#symbol#-shaped|#key_adj#} }key'],
+  'key_adj' : ['iron', 'iron', 'brass', 'golden', 'silver', 'copper'],
+  'BOSS?-name' : ['#dung# of #boss#'],
+  'BOSS?-mention' : ['the #dung_noun# of #boss#'],
+  'name' : ['#dung# of {the }#dramaticEntity.capitalizeAll#', '#compound_name#'],
+  'mention' : ['the #dung_noun#'],
+  'dung' : '{#dung_adj.capitalize# }#dung_noun.capitalize#',
+  'dung_adj' : [
+    'lost', 'forgotten', 'forsaken', 'hidden', 'secret', 'abandoned', 'ruined', 'frozen', 'sunken',
+    'haunted', 'shattered', 'forbidden', 'eternal', 'desert', 'mountain', 'undeground', 'swamp',
+    'subterranean', 'underwater', 'twilight', 'forlorn', 'veiled', 'mystery', 'infected', 'lower',
+    'upper', 'ancient'
+  ],
+  'dung_noun' : [
+    'BOSS?-lair', 'BOSS?-den', 'BOSS?-sepulcher', 'maze', 'catacombs', 'tomb', 'crypt', 'pyramid',
+    'mausoleum', 'hall', 'temple', 'shrine', 'monastery', 'abbey', 'chapel', 'chambers', 'halls',
+    'house', 'mansion', 'palace', 'dungeon', 'vault', 'castle', 'stronghold', 'citadel', 'keep',
+    'library', 'archive', 'prison', 'labyrinth', 'hold', 'sanctum', 'manor', 'asylum',
+    'fort{ress}', 'observatory', 'basilica'
+  ],
+  'dungName1' : [
+    'rage', 'shadow', 'black', 'ice', 'hell', 'way', 'iron', 'storm', 'dark', 'under', 'grim',
+    'blood', 'frost', 'night', 'silver', 'scarlet', 'plague', 'ebon', 'dawn', 'death', 'thunder',
+    'dusk', 'proud', 'dread', 'blight'
+  ],
+  'dungName2' : [
+    'fire', 'fang', 'rock', 'wing', 'crown', 'moon', 'crest', 'throne', 'heart', 'stone', 'root',
+    'blade', 'hill', 'mist', 'sun', 'star', 'spear', 'scar', 'fall', 'wind', 'fist', 'tooth',
+    'claw', 'ring', 'skull', 'scar'],
+  'compound_name' : '#dungName1.capitalize##dungName2# #dung_noun.capitalize#',
+  'boss_adj' : [
+    'serpent', 'viper', 'spider', 'raven', 'dread', 'mad', 'shadow', 'dark', 'blood', 'cursed',
+    'iron', 'golden', 'diamond', 'jade', 'storm', 'fire', 'ice', 'void', 'purple', 'black', 'red',
+    'white', 'vampire', 'undead', 'zombie', 'silent', 'moon', 'immortal', 'shadow', 'fallen',
+    'obsidian', 'scarlet', 'great', 'one-eyed', 'lich', 'amber', 'leper', 'grey', 'blind', 'demon',
+    'blasphemous'
+  ],
+  'boss_noun' : [
+    'king', 'queen', 'prince', 'emperor', 'lord', 'lady', 'baron', 'magus', 'savant', 'titan',
+    'god', 'dragon', 'one', 'master', 'general', 'beast', 'knight', 'witch', 'lady', 'reaper',
+    'messiah', 'priest', 'oracle'
+  ],
+  'bossTitle' : 'the #boss_adj.capitalize# #boss_noun.capitalize#',
+  'boss' : ['#bossTitle#', '#bossTitle#', '#demonicName#'],
+  'story' : '#storyIntro# #rumorInhabitated#{ #rumorReward#}',
+  'storyIntro' : ['BOSS?-#storyBoss#', '#storyAbandoned#', '#storyLocation#'],
+  'storyBoss' : [
+    '#boss.capitalize# is long {dead|gone}, but people are still {reluctant|afraid} to come close to the #dung_noun#.',
+    '{Since|After} the #demise# of #boss# the #dung_noun# has changed hands many times.',
+    "Long after #boss#'s #demise# the #dung_noun# remained #deserted#."
+  ],
+  'demise' : ['demise', 'death', 'fall', 'defeat'],
+  'deserted' : ['deserted', 'abandoned', 'uninhabited'],
+  'storyAbandoned' : [
+    'For #longTime# #mention# #dung_noun.was# considered lost.',
+    'For #longTime# #mention# remained {#deserted#|sealed}.',
+    'After being destroyed {by #terrible.a# #disaster#|in #terrible.a# battle} #longTime# ago #mention# remained #deserted#.'
+  ],
+  'storyLocation' : '#mention.capitalize# #dung_noun.is# situated {#locationDeep#|#locationFar#}.',
+  'locationDeep' : 'deep in the #location#, {#farFrom#|protected by the {#protection#|#protection# and #protection#}}',
+  'locationFar' : [
+    'on a {remote|distant|lonely} island', 'high in the #proper.capitalize# {mountains|peaks}',
+    'at the center of a {{{mist|fog}-shrouded|tranquil|dark} }lake',
+    'on a {forgotten|distant|remote} {shore|coast}', 'at a bend of the river #proper.capitalize#'
+  ],
+  'longTime' : ['{several }centuries', '{many }years', 'a long time', 'decades', 'a millenium'],
+  'recently' : ['recently', 'lately'],
+  'currently' : ['currently', 'these days'],
+  'terrible' : ['terrible', 'horrible', 'great', 'devastating'],
+  'disaster' : ['fire', 'flood', '{magic }storm', 'arcane disaster', 'earthquake'],
+  'rumorInhabitated' : ['#rumorBand#', '#rumorFauna#', '#rumorBeast#'],
+  'rumorReward' : ['#rumorFlora#', '#rumorArtifact#', '#rumorTreasure#'],
+  'rumor' : ['#rumorFauna#', '#rumorFlora#', '#rumorLair#', '#rumorBand#', '#rumorArtifact#', '#rumorTreasure#'],
+  'rumorFauna' : "#currently.capitalize# #dung_noun.they# #dung_noun.is# {{badly }infested by|overrun with} #animal.s#{, {which don't care about|indifferent to} the {history|past} of the place}.",
+  'rumorFlora' : '#mention.capitalize# #dung_noun.is# {home to|a place of growth of} a {rare|valuable|highly valued} specie of {fungi|flowers|mushrooms|plants|herbs|berries|blooms}.',
+  'rumorBeast' : '#recently.capitalize# {#beastAdj.a# #beast# has|0.5?-a pack of #beast.s# have} made its {home|lair} here.',
+  'rumorBand' : [
+    '#recently.capitalize# #gang.a# of #raider.s# rediscovered #dung_noun.them#{, making #dung_noun.them# their {headquarters|center of operation}}.',
+    '#recently.capitalize# #dung_noun.they# #dung_noun.was# squatted by a #gang# of #raider.s#.',
+    'Now #dung_noun.they# #dung_noun.is# controlled by #gang.a# of #raider.s#.'
+  ],
+  'rumorArtifact' : '#rumorsSay# {#demonicName#, a legendary #magic_noun#,|a legendary #magic_noun# #demonicName#} is {still }hidden here.',
+  'rumorTreasure' : [
+    '#rumorsSay# {countless|untold} treasures of {#treasures#|#treasures# and #treasures#} {are stored|can be found} here.',
+    '#rumorsSay# the #dung_noun# #dung_noun.is# rich with {treasures of }{#treasures#|#treasures# and #treasures#}.'
+  ],
+  'rumorsSay' : ['Rumors say that', 'It is said that', 'Word is that', 'It is rumored that'],
+  'treasures' : ['gold{ and jewels}', 'ancient books', 'magical artifacts', '0.1?-maps and charts'],
+  'gang' : ['gang', 'party', 'band'],
+  'beastAdj' : ['{huge|giant}', '{terryfying|fearsome}', 'undead'],
+  'location' : [
+    '{dark|enchanted} {forest|wood{s}}', '{high }mountains', '{sun-drenched }dessert',
+    '{swamps|{salt }marshes}', '{dense }jungle', '{frozen lands|snowy plains}'
+  ],
+  'farFrom' : [
+    'far from the nearest {town|settlement}', 'away from busy roads', 'in uncharted lands',
+    'far from civilization'
+  ],
+  'protection' : ['harsh weather', 'dangerous local fauna', 'impassable terrain'],
+  'proper' : ['#demonicName#', '#dungName1##dungName2#']
+};
+const DEMONS = [
+  'Ahazu', 'Akmenos', 'Akra', 'Akta', 'Amnon', 'Anakis', 'Archimonde', 'Ardranax', 'Argaz',
+  'Arjhan', 'Arkeveron', 'Azarax', 'Azgalor', 'Baelmon', 'Balasar', 'Barakas', 'Bharash', 'Biri',
+  'Bryseis', 'Criella', 'Daar', 'Damaia', 'Damakos', 'Dimensius', 'Donaar', 'Ekemon', 'Esketra',
+  'Farideh', 'Ghesh', 'Hakkar', 'Harann', 'Havilar', 'Heskan', 'Iados', 'Jheri', 'Kairon',
+  'Kallista', 'Kazzak', 'Kava', 'Kethtera', 'Korinn', 'Korvaeth', 'Kylastra', 'Kyronax', 'Lerissa',
+  'Leucis', 'Magtheridon', 'Makaria', 'Mannoroth', 'Medrash', 'Mehen', 'Melech', 'Mephistrot',
+  'Mishann', 'Mordai', 'Morthos', 'Nadarr', 'Nala', 'Nemeia', 'Orianna', 'Oryxus', 'Pandjed',
+  'Patrin', 'Pelaios', 'Perra', 'Phelaia', 'Raiann', 'Rhogar', 'Rieta', 'Sevraxis', 'Shahraz',
+  'Shamash', 'Shedinn', 'Skamos', 'Sora', 'Supremus', 'Surina', 'Talgath', 'Tarhun', 'Thava',
+  'Therai', 'Torinn', 'Tyranna', 'Tyraxis', 'Uadjit', 'Vaskari', 'Xavius', 'Voldranai',
+  'Zalvroxos', 'Zmodlor'
+];
+
+
+class Random {
+  /**
+   * Get random integer in a specified range
+   * @param {number} arg0 the minimal value of the range, inclusive.
+   * @param {number} arg1 the maximal value of the range, exclusive.
+   * @return {number} the generated random integer.
+   */
+  static int(arg0, arg1) {
+    let min, max;
+    let hasArg0 = arg0 !== undefined && arg0 !== null;
+    let hasArg1 = arg1 !== undefined && arg1 !== null;
+    if (hasArg0 && hasArg1) {
+      min = arg0;
+      max = arg1;
+    } else if (hasArg0) {
+      min = 0;
+      max = arg0;
+    } else if (hasArg1) {
+      min = 0;
+      max = arg1;
+    } else {
+      min = 0;
+      max = Number.MAX_SAFE_INTEGER;
+    }
+    return Math.floor(Math.random() * (max - min) + min);
+  }
+
+  /**
+   * Get random float in a specified range
+   * @param {number} arg0 the minimal value of the range, inclusive.
+   * @param {number} arg1 the maximal value of the range, exclusive.
+   * @return {number} the generated random float.
+   */
+  static float(arg0, arg1) {
+    let min, max;
+    let hasArg0 = arg0 !== undefined && arg0 !== null;
+    let hasArg1 = arg1 !== undefined && arg1 !== null;
+    if (hasArg0 && hasArg1) {
+      min = arg0;
+      max = arg1;
+    } else if (hasArg0) {
+      min = 0;
+      max = arg0;
+    } else if (hasArg1) {
+      min = 0;
+      max = arg1;
+    } else {
+      min = 0;
+      max = 1;
+    }
+    return Math.random() * (max - min) + min;
+  }
+
+  /**
+   * Choose random item from the specific array.
+   * @param {*[]} items the array of optional items.
+   * @param {boolean} remove `true` to remove the picked one from `items`, `false` not to.
+   * @return {any} the randomly picked item.
+   */
+  static choose(items, remove = false) {
+    if (items === undefined || items === null || items.length == 0) {
+      return undefined;
+    }
+    let idx = Random.int(items.length - 1);
+    if (remove) {
+      return items.splice(idx, 1)[0];
+    }
+    return items[idx];
+  }
+
+  /**
+   * Randomly decide probability.
+   * @param probability the probability of a thing to happen.
+   * @return {boolean} `true` if the thing happened, `false` or not.
+   */
+  static maybe(probability) {
+    return Math.random() <= probability;
+  }
+
+  /**
+   * N times random value
+   * @param {number} n the count of times
+   * @return {number} the generated average random float.
+   */
+  static times(n=1) {
+    let sum = 0;
+    for (let i = 0; i < n; i++) {
+      sum += Math.random();
+    }
+    return sum / n;
+  }
+
+  /**
+   * random value ^ n
+   * @param {number} n the pow value
+   * @return {number} the generated average random float.
+   */
+  static pow(n=1) {
+    return Math.pow(Random.float(), n);
+  }
+
+  /**
+   * @param {number} n
+   * @return {number} integer
+   */
+  static log(n) {
+    let f = Math.log(n);
+    let f0 = f|0;
+    return f0 + (Random.maybe(f - f0) ? 1 : 0);
+  }
+}
+
+
+class Utils {
+  /**
+   * @param {string} txt
+   * @return {boolean}
+   */
+  static isPlural(txt) {
+    return /[^s]s$/i.test(txt);
+  }
+
+  /**
+   * Capitalize the specific text. Support Unicode text.
+   * @param {string} [first, ...rest] the text to capitalize.
+   * @param {string} locale the locale of the text, default is the language of current session.
+   * @return {string} the capitalized text.
+   */
+  static capitalize([first, ...rest], locale = navigator.language) {
+    return first.toLocaleUpperCase(locale) + rest.join('');
+  }
+
+
+  static NUM_TEXTS = ['zero', 'one', 'two', 'three', 'four', 'five', 'many'];
+
+  /**
+   * @param {number} n
+   * @return {string}
+   */
+  static num2text(n) {
+    return n > NUM_TEXTS.length - 1 ? NUM_TEXTS[NUM_TEXTS.length - 1] : NUM_TEXTS[n];
+  }
+
+  /**
+   * Randomize an array
+   * @param {any[]} ary the array to be shuffled.
+   * @return {any[]} the shuffled copy of `ary`.
+   */
+  static shuffle(ary) {
+    let result = [];
+    for (let e of ary) {
+      result.splice(Random.int(result.length + 1), 0, e);
+    }
+    return result;
+  }
+
+  /**
+   * Randomly choose specific count of items from an array.
+   * @param {any[]} ary the array to query.
+   * @param {number} n the number of items to choose.
+   * @return {any[]} the chose items.
+   */
+  static subset(ary, n) {
+    return Utils.shuffle(ary).slice(0, n);
+  }
+
+  /**
+   * Check whether the array contains the specific item.
+   * @param {any[]} ary the array to query.
+   * @param {any} val the item to check.
+   * @return {boolean} whether the array contains the item.
+   */
+  static includes(ary, val) {
+    let valHasEquals = typeof val === 'object' && val.hasOwnProperty('equals');
+    return ary.some(item => (valHasEquals && val.equals(item)) || (!valHasEquals && item === val) || false);
+  }
+
+  /**
+   * Merge two specific arrays and keep the items unique.
+   * @param {any[]} ary1 the array to change.
+   * @param {any[]} ary2 the array to merge.
+   * @param {any[]} the updated array, i.e. `ary1`.
+   */
+  static addAll(ary1, ary2) {
+    ary2.forEach((val) => {
+      if (!Utils.includes(ary1, val)) {
+        ary1.push(val);
+      }
+    });
+    return ary1;
+  }
+
+  /**
+   * Remove the specific item from an array.
+   * @param {any[]} ary the array to change.
+   * @param {any} val the item's value.
+   * @return the modified array.
+   */
+  static arrayRemove(ary, val) {
+    let valHasEquals = typeof val === 'object' && val.hasOwnProperty('equals');
+    for(let i = 0; i < ary.length; i++) {
+      if ((valHasEquals && val.equals(ary[i])) || (!valHasEquals && ary[i] === val) || false) {
+        ary.splice(i, 1);
+        i--;
+      }
+    }
+    return ary;
+  }
+
+  /**
+   * @param {any[]} ary
+   * @param {number[]} weights
+   * @return {any}
+   */
+  static weighted(ary, weights) {
+    let z = Random.float(weights.reduce((prev, curr) => prev + curr, 0));
+    let acc = 0;
+    for (let i = 0; i < ary.length; i++) {
+      if (z <= (acc += weights[i])) {
+        return ary[i];
+      }
+    }
+    return ary[0];
+  }
+
+  /**
+   * Convert axis to angle in degrees.
+   *
+   * @param {number|paper.Point} arg0 x coordinate value of the axis or the axis instance
+   * @param {number|undefined} arg1 x coordinate value of the axis
+   * @return {number} corresponding angle in degrees.
+   */
+  static axis2angle(arg0, arg1) {
+    let p;
+    if (arg1 !== undefined && arg1 !== null) {
+      p = new paper.Point(arg0, arg1);
+    } else {
+      p = arg1;
+    }
+    if (p.equals(Dot_UP)) {
+      return 90;
+    }
+    if (p.equals(Dot_RIGHT)) {
+      return 180;
+    }
+    if (p.equals(Dot_DOWN)) {
+      return 270;
+    }
+    return 0;
+  }
+
+  /**
+   * @param {number} a
+   * @param {number} b
+   * @param {number} w
+   * @return {number}
+   */
+  interpolate(a, b, w) {
+    return a + (b - a) * w;
+  }
+}
+
+
+class PerlinNoise {
+  static permutation = [
+    151, 160, 137,  91,  90,  15, 131,  13, 201,  95,  96,  53, 194, 233,   7, 225,
+    140,  36, 103,  30,  69, 142,   8,  99,  37, 240,  21,  10,  23, 190,   6, 148,
+    247, 120, 234,  75,   0,  26, 197,  62,  94, 252, 219, 203, 117,  35,  11,  32,
+     57, 177,  33,  88, 237, 149,  56,  87, 174,  20, 125, 136, 171, 168,  68, 175,
+     74, 165,  71, 134, 139,  48,  27, 166,  77, 146, 158, 231,  83, 111, 229, 122,
+     60, 211, 133, 230, 220, 105,  92,  41,  55,  46, 245,  40, 244, 102, 143,  54,
+     65,  25,  63, 161,   1, 216,  80,  73, 209,  76, 132, 187, 208,  89,  18, 169,
+    200, 196, 135, 130, 116, 188, 159,  86, 164, 100, 109, 198, 173, 186,   3,  64,
+     52, 217, 226, 250, 124, 123,   5, 202,  38, 147, 118, 126, 255,  82,  85, 212,
+    207, 206,  59, 227,  47,  16,  58,  17, 182, 189,  28,  42, 223, 183, 170, 213,
+    119, 248, 152,   2,  44, 154, 163,  70, 221, 153, 101, 155, 167,  43, 172,   9,
+    129,  22,  39, 253,  19,  98, 108, 110,  79, 113, 224, 232, 178, 185, 112, 104,
+    218, 246,  97, 228, 251,  34, 242, 193, 238, 210, 144,  12, 191, 179, 162, 241,
+     81,  51, 145, 235, 249,  14, 239, 107,  49, 192, 214,  31, 181, 199, 106, 157,
+    184,  84, 204, 176, 115, 121,  50,  45, 127,   4, 150, 254, 138, 236, 205,  93,
+    222, 114,  67,  29,  24,  72, 243, 141, 128, 195,  78,  66, 215,  61, 156, 180
+  ];
+  static ease = null;
+
+  /**
+   * @param {number} seed
+   * @return {PerlinNoise}
+   */
+  constructor() {
+    let idx = Random.int(PerlinNoise.permutation.length);
+    this.p = PerlinNoise.permutation.slice(idx).concat(PerlinNoise.permutation.slice(0, idx));
+    this.p = this.p.concat(this.p);
+    if (PerlinNoise.ease == null) {
+      let t, data = [];
+      for (let i = 0; i < 4096; i++) {
+        t = i / 4096;
+        data.push(t * t * t * (t * (6 * t - 15) + 10));
+      }
+      PerlinNoise.ease = data;
+    }
+  }
+
+  /**
+   * @param {number} hash
+   * @param {number} x
+   * @param {number} y
+   * @return {number}
+   */
+  dot(hash, x, y) {
+    switch (hash & 3) {
+      case 0:
+        return x + y;
+      case 1:
+        return x - y;
+      case 2:
+        return -x + y;
+      case 3:
+        return -x - y;
+      default:
+        return 0;
+    }
+  }
+
+  /**
+   * @param {number} x
+   * @param {number} y
+   * @param {number} gridSize
+   * @return {number}
+   */
+  noise(x, y, gridSize=1) {
+    x *= gridSize;
+    y *= gridSize;
+    let j0 = x | 0;
+    let j1 = j0 + 1;
+    let fx = x - j0;
+    let wx = PerlinNoise.ease[fx * 4096 | 0];
+    let i0 = y | 0;
+    let i1 = i0 + 1;
+    let fy = y - i0;
+    let wy = PerlinNoise.ease[fy * 4096 | 0];
+    let aa = this.p[this.p[j0] + i0];
+    let ab = this.p[this.p[j1] + i0];
+    let ba = this.p[this.p[j0] + i1];
+    let bb = this.p[this.p[j1] + i1];
+    let v0;
+    switch (aa & 3) {
+      case 0:
+        v0 = fx + fy;
+        break;
+      case 1:
+        v0 = fx - fy;
+        break;
+      case 2:
+        v0 = -fx + fy;
+        break;
+      case 3:
+        v0 = -fx - fy;
+        break;
+      default:
+        v0 = 0;
+    }
+    let x1 = fx - 1;
+    let v1;
+    switch (ab & 3) {
+      case 0:
+        v1 = x1 + fy;
+        break;
+      case 1:
+        v1 = x1 - fy;
+        break;
+      case 2:
+        v1 = -x1 + fy;
+        break;
+      case 3:
+        v1 = -x1 - fy;
+        break;
+      default:
+        v1 = 0;
+    }
+    let val0 = Utils.interpolate(v0, v1, wx);
+    let y1 = fy - 1;
+    let v01;
+    switch (ba & 3) {
+      case 0:
+        v01 = fx + y1;
+        break;
+      case 1:
+        v01 = fx - y1;
+        break;
+      case 2:
+        v01 = -fx + y1;
+        break;
+      case 3:
+        v01 = -fx - y1;
+        break;
+      default:
+        v01 = 0;
+    }
+    let x2 = fx - 1;
+    let y2 = fy - 1;
+    let v11;
+    switch (bb & 3) {
+      case 0:
+        v11 = x2 + y2;
+        break;
+      case 1:
+        v11 = x2 - y2;
+        break;
+      case 2:
+        v11 = -x2 + y2;
+        break;
+      case 3:
+        v11 = -x2 - y2;
+        break;
+      default:
+        v11 = 0;
+    }
+    let val1 = Utils.interpolate(v01, v11, wx);
+    return Utils.interpolate(val0, val1, wy);
+  }
+
+  /**
+   * @param {number} width
+   * @param {number} height
+   * @param {number} gridSize
+   * @param {paper.Point} offset
+   * @return {number[][]}
+   */
+  noiseMap(width, height, gridSize=1, offset=null) {
+    let grid = new Array(height);
+    let xStep = gridSize / width; // TODO: whether the result is a float?
+    let yStep = gridSize / width; // TODO: whether the result is a float?
+    let ofsx = offset != null ? offset.x : 0;
+    let ofsy = offset != null ? offset.y : 0;
+    let y = ofsy;
+    for (let h = 0; h < height; h++) {
+      let x = ofsx;
+      grid[h] = new Array(width);
+      for (let w = 0; w < width; w++) {
+        grid[h][w] = PerlinNoise.noise(x, y);
+        x += xStep;
+      }
+      y += yStep;
+    }
+    return grid;
+  }
+
+  /**
+   * @param {number} x
+   * @param {number} y
+   * @param {number} octaves
+   * @param {number} gridSize
+   * @param {number} persistance
+   * @return {number}
+   */
+  noiseHigh(x, y, octaves, gridSize=1, persistance=0.5) {
+    let result = this.noise(x, y, gridSize);
+    let amplitude = persistance;
+    for (let i = 1; i < octaves; i++) {
+      gridSize *= 2;
+      result += this.noise(x, y, gridSize) * amplitude;
+      amplitude *= persistance;
+    }
+    return result;
+  }
+
+  /**
+   * @param {number} width
+   * @param {number} height
+   * @param {number} octaves
+   * @param {number} gridSize
+   * @param {number} persistance
+   * @param {paper.Point[]} offsets
+   * @return {number[][]}
+   */
+  noiseMapHigh(width, height, octaves, gridSize=1, persistance=0.5, offsets=null) {
+    let result = this.noiseMap(width, height, gridSize, offsets != null ? offsets[0] : null);
+    let amplitude = persistance;
+    for (let i = 1; i < octaves; i++) {
+      gridSize *= 2;
+      let o = this.noiseMap(width, height, gridSize, offsets != null ? offsets[i] : null);
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          result[y][x] += o[y][x] * amplitude;
+        }
+      }
+      amplitude *= persistance;
+    }
+    return result;
+  }
+}
+
+
+const NLP_Markov_HISTORY = 2;
+const NLP_Markov_EOW = '';
+class NLP_Markov {
+  /**
+   * Construct a NLP_Markov instance.
+   * @param {string[]} words
+   * @return {NLP_Markov} this NLP_Markov instance.
+   */
+  constructor(words) {
+    this.phonemes = NLP_Syllables_VOWELS.concat(NLP_Syllables_CONSONANTS);
+    this.phonemes.sort((s1, s2) => s2.length - s1.length);
+    this.map = {};
+    this.source = words;
+    for (let word of words) {
+      if (word === '') {
+        continue;
+      }
+
+      let sylls = this.split(word.toLowerCase());
+      let prev = [];
+      for (let syll of sylls) {
+        let prevStr = prev.join('');
+        if (this.map.hasOwnProperty(prevStr)) {
+          this.map[prevStr].push(syll);
+        } else {
+          this.map[prevStr] = [syll];
+        }
+        prev.push(syll);
+        if (prev.length > 2) {
+          prev.shift();
+        }
+      }
+      let prevStr = prev.join('');
+      if (this.map.hasOwnProperty(prevStr)) {
+        this.map[prevStr].push('');
+      } else {
+        this.map[prevStr] = [''];
+      }
+    }
+  }
+
+  /**
+   * @param {string} word
+   * @return {string[]}
+   */
+  split(word) {
+    let result = [];
+    while (word !== '') {
+      let phonemeFound = false;
+      for (let ph of this.phonemes) {
+        if (word.endsWith(ph)) {
+          result.unshift(ph);
+          word = word.substring(0, word.length - ph.length);
+          phonemeFound = true;
+          break;
+        }
+      }
+      if (!phonemeFound) {
+        word = word.substring(0, word.length - 1);
+      }
+    }
+    return result;
+  }
+
+  /**
+   * @param {number} maxSylls
+   * @returns {string}
+   */
+  generate(maxSylls=-1) {
+    while (true) {
+      let result = '';
+      let hist = [];
+      let next = Random.choose(this.map['']);
+      while (next !== '') {
+        result += next;
+        hist.push(next);
+        if (hist.length > 2) {
+          hist.shift();
+        }
+        next = Random.choose(this.map[hist.join('')]);
+      }
+      if (maxSylls == -1 || NLP_Syllables.splitWord(result).length <= maxSylls) {
+        return result;
+      }
+    }
+  }
+}
+
+
+const NLP_Syllables_VOWELS = [
+  'you', 'ye', 'yo', 'ya', 'ie', 'ee', 'oo', 'ea', 'ei', 'ey', 'oi', 'ou', 'ai', 'ay', 'au', 'oi',
+  'oy', 'ue', 'ua', 'u', 'o', 'a', 'e', 'i', 'y'
+];
+const NLP_Syllables_CONSONANTS = [
+  'wh', 'th', 'ck', 'ch', 'sh', 'gh', 'ph', 'qu', 'b', 'c', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'm',
+  'n', 'p', 'q', 'r', 's', 't', 'v', 'w', 'x', 'z'
+];
+class NLP_Syllables {
+  /**
+   * @param {string} word
+   * @return {string[]}
+   */
+  static splitWord(word) {
+    let result = [];
+    while (word.length > 0) {
+      let syll = result.length == 0 && word.endsWith('e') ? NLP_Syllables.pinch(word.substring(0, word.length - 1)) + 'e' : NLP_Syllables.pinch(word);
+      result.unshift(syll);
+      word = word.substring(0, word.length - syll.length);
+      if (NLP_Syllables_VOWELS.every(v => !word.includes(v))) {
+        result[0] = word + result[0];
+        word = '';
+      }
+    }
+    return result;
+  }
+
+  /**
+   * @param {string} word
+   * @return {string}
+   */
+  static pinch(word) {
+    let pos = word.length - 1;
+    while (pos >= 0 && !NLP_Syllables_VOWELS.includes(word.charAt(pos))) {
+      --pos;
+    }
+    if (pos < 0) {
+      return word;
+    }
+
+    for (let v of NLP_Syllables_VOWELS) {
+      if (word.substring(pos - (v.length - 1), pos + 1) === v) {
+        pos -= v.length;
+        break;
+      }
+    }
+    if (pos < 0) {
+      return word;
+    }
+
+    for (let c of NLP_Syllables_CONSONANTS) {
+      if (word.substring(pos - (c.length - 1), pos + 1) === c) {
+        return word.substring(pos - (c.length - 1));
+      }
+    }
+    return word.substring(pos + 1);
+  }
+}
+
+
+class Story {
+  static demonic = new NLP_Markov(DEMONS);
+
+  /**
+   * Construct a Story instance.
+   * @param {MapGenerator} generator
+   * @return {Story} this Story instance.
+   */
+  constructor(generator) {
+    this.grammar = Story.createGrammar();
+    this.name = this.grammar.flatten('#name#');
+
+    let tags = Tags.deriveTags(this.name);
+    generator.tags.push(...tags);
+    if (Random.maybe(0.5)) {
+      generator.tags.push('multi-level');
+    }
+    generator.tags.forEach(t => this.grammar.setFlag(t));
+
+    this.hook = this.grammar.flatten('#story#');
+  }
+
+  static createGrammar() {
+    let grammar = tracery.createGrammar(STORY_SPELL_BOOK);
+    grammar.modifiers.caps = function(str) {
+      return str.toUpperCase();
+    };
+    grammar.modifiers.they = function(str) {
+      return Utils.isPlural(str) ? 'they' : 'it';
+    };
+    grammar.modifiers.them = function(str) {
+      return Utils.isPlural(str) ? 'them' : 'it';
+    };
+    grammar.modifiers.is = function(str) {
+      return Utils.isPlural(str) ? 'are' : 'is';
+    };
+    grammar.modifiers.was = function(str) {
+      return Utils.isPlural(str) ? 'were' : 'was';
+    };
+
+    grammar.symbols.demonicName = grammar.addOrGetSymbol('demonicName');
+    grammar.symbols.demonicName.grammar = grammar;
+    grammar.symbols.demonicName.key = 'demonicName';
+    grammar.symbols.demonicName.loadFrom('');
+    grammar.symbols.demonicName.currentRules.rules[0].getParsed = function() {
+      if (Random.maybe(0.25)) {
+        this.raw = Utils.capitalize(Story.demonic.generate(3)) + '-' + Utils.capitalize(Story.demonic.generate(3));
+      } else {
+        this.raw = Utils.capitalize(Story.demonic.generate(4));
+      }
+      this.sections = [this.raw];
+      return this.sections;
+    };
+
+    grammar.flags = [];
+    grammar.setFlag = function(flag) {
+      flag = flag.toUpperCase();
+      if (!this.flags.includes(flag)) {
+        this.flags.push(flag);
+      }
+    };
+    grammar.fix = function(key) {
+      let value = this.flatten('#' + key + '#');
+      this.pushRules(key, [value]);
+      return value;
+    };
+    if (Random.maybe(2/3)) {
+      grammar.setFlag('boss');
+      grammar.fix('boss');
+    }
+    grammar.fix('dung_noun');
+    grammar.fix('dung');
+    grammar.fix('raider');
+    grammar.fix('native');
+    grammar.fix('symbol');
+    grammar.fix('location');
+    return grammar;
+  }
+
+  /**
+   * @param {string} flag
+   */
+  setFlag(flag) {
+    this.grammar.setFlag(flag);
+  }
+
+  /**
+   * @param {Room} room
+   * @param {Door} door
+   * @return {string}
+   */
+  dir2text(room, door) {
+    let dir = room.equals(door.from) ? door.dir : new paper.Point(-door.dir.x, -door.dir.y);
+    if (Dot_UP.equals(dir)) {
+      return this.grammar.flatten('#north#');
+    }
+    if (Dot_DOWN.equals(dir)) {
+      return this.grammar.flatten('#south#');
+    }
+    if (Dot_LEFT.equals(dir)) {
+      return this.grammar.flatten('#west#');
+    }
+    return this.grammar.flatten('#east#');
+  }
+
+  /**
+   * @param {any} planner
+   */
+  initKeys(planner) {
+    let key = this.grammar.flatten('#key.a#');
+    this.keys = new Array(planner.nKeys).fill(key);
+  }
+
+  /**
+   * @param {any} planner
+   * @param {Room} room
+   * @return {string}
+   */
+  getRoomDesc(planner, room) {
+    this.grammar.pushRules('room', [room.word()]);
+    let desc = [];
+    if (room.event) {
+      desc.push(this.getEventText(planner, room));
+    }
+    if (room.gate) {
+      desc.push(this.getGateText(planner, room));
+    }
+    if (room.loot) {
+      desc.push(this.getLootText(planner, room));
+    }
+    if (room.key) {
+      desc.push(this.getKeyText(planner, room));
+    }
+    this.grammar.popRules('room');
+    return desc.length > 0 ? desc.join(' ') : null;
+  }
+
+  /**
+   * @param {any} planner
+   * @param {Room} room
+   * @return {string}
+   */
+  getGateText(planner, room) {
+    let gate = undefined;
+    for (let v of room.getExits()) {
+      if (v.type == Door.SPECIAL) {
+        gate = v;
+        break;
+      }
+    }
+    let dir = this.dir2text(room, gate);
+    this.grammar.pushRules('dir', [dir]);
+    this.grammar.pushRules('num', [Utils.num2text(planner.nKeys)]);
+    let key;
+    switch (planner.nKeys) {
+      case 0:
+        key = '#gate_nokey#';
+        break;
+      case 1:
+        key = '#gate_onekey#';
+        break;
+      default:
+        key = '#gate_manykeys#';
+    }
+    let text = this.grammar.flatten(key);
+    this.grammar.popRules('num');
+    this.grammar.popRules('dir');
+    return text;
+  }
+
+  /**
+   * @param {any} planner
+   * @param {Room} room
+   * @return {string}
+   */
+  getKeyText(planner, room) {
+    let key = this.keys.pop();
+    this.grammar.pushRules('treasure', [key]);
+    this.grammar.pushRules('special_item', [key]);
+    let text = this.grammar.flatten('#loot#');
+    this.grammar.popRules('special_item');
+    this.grammar.popRules('treasure');
+    return text;
+  }
+
+  /**
+   * @param {any} planner
+   * @param {Room} room
+   * @return {string}
+   */
+  getLootText(planner, room) {
+    return this.grammar.flatten('#loot#');
+  }
+
+  /**
+   * @param {any} planner
+   * @param {Room} room
+   * @return {string}
+   */
+  getEventText(planner, room) {
+    return this.grammar.flatten('#event#');
+  }
+}
+
+
+class Tags {
+  /**
+   * @param {string} text
+   * @return {string[]}
+   */
+  static deriveTags(text) {
+    let result = [];
+    for (let word of text.split(' ')) {
+      result.push(...TAG_ANCHORS[word.toLowerCase()]||[]);
+    }
+    return result;
+  }
+
+  /**
+   * @return {string[]}
+   */
+  static getPublic() {
+    return TAG_INFOS.keys();
+  }
+
+  /**
+   * @param {string} tag
+   * @return {string}
+   */
+  static getInfo(tag) {
+    return TAG_INFOS[tag];
+  }
+
+  /**
+   * @param {string[]} tags
+   * @param {string} another
+   */
+  static resolve(tags, another) {
+    for (let exp of TAG_EXCEPTIONS) {
+      if (exp.includes(another)) {
+        exp = exp.filter(t => another !== t);
+        for (let e of exp) {
+          let idx = tags.indexOf(e);
+          if (idx != -1) {
+            tags.splice(idx, 1);
+          }
+        }
+      }
+    }
+    if (another !== null) {
+      tags.push(another);
+    }
+  }
+}
+
+
+class Deck {
+  /**
+   * @param {number[]}} cards
+   */
+  constructor(cards) {
+    this.cards = Utils.shuffle(cards);
+    this.pile = [];
+    this._round = 0;
+  }
+
+  draw() {
+    if (this.cards.length == 0) {
+      if (this.pile.length == 0) {
+        return null;
+      }
+      this.cards = Utils.shuffle(this.pile);
+      this.pile = [];
+      this._round++;
+    }
+    return this.cards.pop();
+  }
+
+  discard(card) {
+    this.pile.push(card);
+    return card;
+  }
+
+  putOnTop(card) {
+    this.cards.push(card);
+    return card;
+  }
+
+  shuffle(card) {
+    this.cards.splice(Random.int(this.cards.length + 1), 0, card);
+    return card;
+  }
+
+  pick() {
+    return this.discard(this.draw());
+  }
+
+  get_round() {
+    return this._round;
+  }
+}
+
+
+class Poly {
+  /**
+   * @param {paper.Point[]} poly
+   * @param {number|paper.Point} arg1
+   * @param {[number]} arg2
+   */
+  static translate(poly, arg1, arg2) {
+    let dp, type1 = typeof arg1;
+    if (type1 === 'object') {
+      dp = arg1;
+    } else {
+      dp = new paper.Point(arg1, arg2);
+    }
+    return poly.map(v => v.add(dp));
+  }
+
+  /**
+   * @param {paper.Point[]} poly
+   * @param {number|paper.Point} arg1
+   * @param {[number]} arg2
+   */
+  static asTranslate(poly, arg1, arg2) {
+    let dx, dy, type1 = typeof arg1;
+    if (type1 === 'object') {
+      dx = arg1.x;
+      dy = arg1.y;
+    } else {
+      dx = arg1;
+      dy = arg2;
+    }
+    for (let i = 0; i < poly.length; i++) {
+      poly[i].x += dx;
+      poly[i].y += dy;
+    }
+  }
+
+  /**
+   * @param {paper.Point[]} poly
+   * @param {number} s
+   */
+  static scale(poly, s) {
+    return poly.map(v => v.multiply(s));
+  }
+
+  /**
+   * @param {paper.Point[]} poly
+   * @param {number} s
+   */
+  static asScale(poly, s) {
+    for (let i = 0; i < poly.length; i++) {
+      poly[i].x *= s;
+      poly[i].y *= s;
+    }
+  }
+
+  /**
+   * @param {paper.Point[]} poly
+   * @param {number} sin
+   * @param {number} cos
+   */
+  static rotateYX(poly, sin, cos) {
+    // TODO: convert (sin, cos) to angle, and use Point.rotate():
+    // 1. compare (sin, cos) with Dot_* to get n * 90;
+    // 2. otherwise return new paper.Point(sin, cos).angle
+    return poly.map(v => new paper.Point(v.x * cos - v.y * sin, v.x * sin + v.y * cos));
+  }
+
+  /**
+   * @param {paper.Point[]} poly
+   * @param {number} sin
+   * @param {number} cos
+   */
+  static asRotateYX(poly, sin, cos) {
+    // TODO: convert (sin, cos) to angle, and use Point.rotate():
+    // 1. compare (sin, cos) with Dot_* to get n * 90;
+    // 2. otherwise return new paper.Point(sin, cos).angle
+    for (let i = 0; i < poly.length; i++) {
+      poly[i].x = v.x * cos - v.y * sin;
+      poly[i].y = v.x * sin + v.y * cos;
+    }
+  }
+
+  /**
+   * Create a rectangle poly.
+   * @param {number} width
+   * @param {number} height
+   * @return {paper.Point[]} the created poly.
+   */
+  static rect(width, height) { // TODO: directly return a Path.
+    let w2 = width / 2, h2 = height / 2;
+    return [
+      new paper.Point(-w2, -h2),
+      new paper.Point(w2, -h2),
+      new paper.Point(w2, h2),
+      new paper.Point(-w2, h2)
+    ];
+  }
+
+  /**
+   * Creates a regular polygon poly.
+   * @param {number} sides the number of sides of the polygon
+   * @param {number} radius the radius of the polygon
+   * @return {paper.Point[]} the created poly.
+   */
+  static regular(sides, radius) { // TODO: directly return a Path.
+    let p = new paper.Path.RegularPolygon({
+      center: [0, 0],
+      sides: sides,
+      radius: radius,
+      visible: false
+    });
+    let poly = p.segments.map(s => s.point);
+    p.remove();
+    return poly;
+  }
+
+  /**
+   * @param {paper.Point[]} points
+   * @param {boolean} closed
+   * @param {number} order
+   * @param {paper.Point[]} exclude
+   * @return {paper.Point[]}
+   */
+  static chaikinRender(points, closed, order=1, exclude=[]) {
+    for (let i = 0; i < order; i++) {
+      let result = [];
+      let n = points.length;
+      let p;
+      for (let j = 1; j < points.length - 1; i++) {
+        p = points[j];
+        if (!Utils.includes(exclude, p)) {
+          result.push(p);
+        } else {
+          result.push(Poly.lerp(p, points[j - 1], 0.25));
+          result.push(Poly.lerp(p, points[j + 1], 0.25));
+        }
+      }
+      if (closed) {
+        p = points[points.length - 1];
+        if (!Utils.includes(exclude, p)) {
+          result.push(p);
+        } else {
+          result.push(Poly.lerp(p, points[points.length - 2], 0.25));
+          result.push(Poly.lerp(p, points[0], 0.25));
+        }
+        p = points[0];
+        if (!Utils.includes(exclude, p)) {
+          result.push(p);
+        } else {
+          result.push(Poly.lerp(p, points[points.length - 1], 0.25));
+          result.push(Poly.lerp(p, points[1], 0.25));
+        }
+      } else {
+        result.unshift(points[0]);
+        result.push(points[n - 1]);
+      }
+      points = result;
+    }
+    return points;
+  }
+
+  /**
+   * @param {paper.Point} p1
+   * @param {paper.Point} p2
+   * @param {number} ratio
+   * @return {paper.Point}
+   */
+  static lerp(p1, p2, ratio=0.5) {
+    return new paper.Point(
+      (1 - ratio) * p1.x + ratio * p2.x,
+      (1 - ratio) * p1.y + ratio * p2.y
+    );
+  }
+
+  /**
+   * @param {paper.Point[]} poly
+   * @param {number} step
+   * @return {paper.Point[]}
+   */
+  static resample(poly, step) {
+    let len = 0;
+    let res = [poly[0]];
+    let ofs = step;
+    let seg = 1;
+    let p0 = poly[0];
+    let p1 = poly[1];
+    let segLen = p0.getDistance(p1);
+    while (true) {
+      if (len + segLen > ofs) {
+        res.push(Poly.lerp(p0, p1, (ofs - len) / segLen));
+        ofs += step;
+      } else {
+        if (++seg >= poly.length) {
+          break;
+        }
+        len += segLen;
+        p0 = p1;
+        p1 = poly[seg];
+        segLen = p0.getDistance(p1);
+      }
+    }
+    let end = poly[poly.length - 1];
+    if (res[res.length - 1].getDistance(end) > 0) {
+      res.push(end);
+    } else {
+      res[res.length - 1] = end;
+    }
+    return res;
+  }
+
+  /**
+   * @param {paper.Point[]} poly
+   * @return {number}
+   */
+  pathLength(poly) {
+    let l = 0;
+    for (let i = 1; i < poly.length; i++) {
+      l += poly[i - 1].getDistance(poly[i]);
+    }
+    return l;
+  };
+}
+
+
+class Drawing extends paper.Group {  // <= com_watabou_dungeon_visuals_drawings_Drawing
+  /**
+   * @param {paper.Item[]} children the points of this shape.
+   * @param {Map} config the current theme.
+   */
+  constructor(children=[], config=PresetMapStyle_DEFAULT) {
+    super(children);
+    this.visible = false;
+    this.setStyle(config);
+  }
+
+  /**
+   * @param {Map} config the current theme.
+   */
+  setStyle(config) {
+    this.children.forEach(p => p.setStyle(config));
+  }
+
+  /**
+   * @param {paper.Point} pos
+   * @param {number} angle
+   * @param {number} scale
+   * @return {Drawing}
+   */
+  place(pos, angle=0, scale=1) {  // <= com_watabou_dungeon_visuals_drawings_Instance
+    let inst = this.clone();
+    inst.visible = true;
+    inst.rotate(angle);
+    inst.scale(scale * 30);
+    inst.position = pos.multiply(30).add(inst.bounds.size.divide(2));
+    return inst;
+  }
+}
+
+
+class Shape extends paper.Path {
+  /**
+   * @param {paper.Point[]} points the points of this shape.
+   * @param {boolean} closed whether the path is closed.
+   * @param {Map} config the current theme.
+   */
+  constructor(points, closed=true, config=PresetMapStyle_DEFAULT) {
+    super(points);
+    this.visible = false;
+    this.closed = closed;
+    this.setStyle(config);
+  }
+
+  /**
+   * @param {Map} config the current theme.
+   */
+  setStyle(config) {
+    this.strokeColor = config.colorInk;
+    this.fillColor = config.blackAndWhite ? config.colorPaper : config.colorBg;
+  }
+
+  /**
+   * @param {paper.Point} pos
+   * @param {number} angle
+   * @param {number} scale
+   * @return {Shape}
+   */
+  place(pos, angle=0, scale=1) {  // <= com_watabou_dungeon_visuals_drawings_Instance
+    let inst = this.clone();
+    inst.visible = true;
+    inst.rotate(angle);
+    inst.scale(scale * 30);
+    inst.position = pos.multiply(30).add(inst.bounds.size.divide(2));
+    return inst;
+  }
+}
+
+
+class NoStokeShape extends Shape {
+  /**
+   * @param {Map} config the current theme.
+   */
+  setStyle(config) {
+    super.setStyle(config);
+    this.strokeWidth = 0;
+  }
+}
+
+
+class NoStokeInkShape extends NoStokeShape {
+  /**
+   * @param {Map} config the current theme.
+   */
+  setStyle(config) {
+    super.setStyle(config);
+    this.fillColor = config.colorInk;
+  }
+}
+
+
+class NoFillShape extends Shape {
+  /**
+   * @param {Map} config the current theme.
+   */
+  setStyle(config) {
+    super.setStyle(config);
+    this.fillColor = undefined;
+  }
+}
+
+
+class WaterShape extends Shape {
+  /**
+   * @param {Map} config the current theme.
+   */
+  setStyle(config) {
+    super.setStyle(config);
+    this.fillColor = config.colorWater;
+  }
+}
+
+
+class Boulder extends Shape {
+  constructor() {
+    let poly = [
+      new paper.Point({length: 0.5, angle: Random.float(90)}),
+      new paper.Point({length: 0.5, angle: Random.float(90, 180)}),
+      new paper.Point({length: 0.5, angle: Random.float(180, 270)}),
+      new paper.Point({length: 0.5, angle: Random.float(270, 360)})
+    ];
+    super(Poly.chaikinRender(poly, true, 2));
+  }
+
+  static insts = [new Boulder(), new Boulder(), new Boulder()];
+
+  /**
+   * @return {Boulder}
+   */
+  static random() {
+    return Random.choose(Boulder.insts).clone();
+  }
+}
+
+
+class Tapestry extends Shape {
+  /**
+   * @param {number} len
+   * @return {Tapestry}
+   */
+  constructor(len) {
+    let poly = [], len2 = len / 2;
+    for (let i = 0; i < len; i++) {
+      poly.push(new paper.Point(i + 0.00 - len2, -0.4));
+      poly.push(new paper.Point(i + 0.05 - len2, -0.2));
+      poly.push(new paper.Point(i + 0.25 - len2, -0.2));
+      poly.push(new paper.Point(i + 0.30 - len2, -0.4));
+      poly.push(new paper.Point(i + 0.50 - len2, -0.4));
+      poly.push(new paper.Point(i + 0.55 - len2, -0.2));
+      poly.push(new paper.Point(i + 0.75 - len2, -0.2));
+      poly.push(new paper.Point(i + 0.80 - len2, -0.4));
+    }
+    poly.shift();
+    poly = Poly.chaikinRender(poly, false, 2);
+    poly.shift();
+    poly.pop();
+    super(poly, false);
+  }
+
+  static cache = new Map();
+
+  /**
+   * @param {number} len
+   * @return {Tapestry}
+   */
+  static get(len) {
+    if (Tapestry.cache.has(len)) {
+      return Tapestry.cache.get(len);
+    }
+    let inst = new Tapestry(len);
+    Tapestry.cache.set(len, inst);
+    return inst;
+  }
+}
+
+
+class Statue extends Drawing {
+  constructor() {
+    let shape1 = new Shape(Poly.regular(16, 1/3));
+
+    let poly = [];
+    for (let i = 0; i < 10; i++) {
+      poly.push(
+        new paper.Point({
+          length: ((i & 1) == 0 ? 0.9 : 0.4) / 3,
+          angle: 36 * (i - 2.5)
+        })
+      );
+    }
+    let shape2 = new NoStokeInkShape(poly);
+    super([shape1, shape2]);
+  }
+
+  static inst = new Statue();
+}
+
+
+class Sarcophagus extends Drawing {
+  constructor() {
+    let poly = [
+      new paper.Point(-0.25, -0.2),
+      new paper.Point(-0.15, -0.45),
+      new paper.Point(0.15, -0.45),
+      new paper.Point(0.25, -0.2),
+      new paper.Point(0.15, 0.45),
+      new paper.Point(-0.15, 0.45)
+    ];
+    let shape1 = new Shape(poly);
+    let shape2 = new NoFillShape(Poly.scale(poly, 0.7));
+    super([shape1, shape2]);
+  }
+
+  static inst = new Sarcophagus();
+}
+
+
+class Altar extends Drawing {
+  constructor() {
+    let poly = Poly.rect(0.4, 0.8);
+    let shape1 = new Shape(Poly.translate(poly, 0.2, 0));
+
+    poly = Poly.regular(6, 0.01);
+    let shape2 = new Shape(Poly.translate(poly, 0.2, -0.2));
+    let shape3 = new Shape(Poly.translate(poly, 0.2, 0.2));
+    super([shape1, shape2, shape3]);
+  }
+
+  static inst = new Altar();
+}
+
+
+class Throne extends Drawing {
+  constructor() {
+    let shape1 = new Shape(Poly.rect(0.4, 0.5));
+    let shape2 = new Shape(Poly.translate(Poly.rect(0.3, 0.3), -0.1, 0));
+    super([shape1, shape2]);
+  }
+
+  static inst = new Throne();
+}
+
+
+class Well extends Drawing {
+  constructor() {
+    let r = 0.4;
+    let shape1 = new Shape(Poly.regular(16, r));
+    let shape2 = new WaterShape(Poly.regular(16, r * 0.6));
+    super([shape1, shape2]);
+  }
+
+  static inst = new Well();
+}
+
+
+class Chest extends Drawing {
+  constructor() {
+    super([
+      new Shape(Poly.rect(0.6, 0.8)),
+      new Shape([new paper.Point(-0.3, -0.25), new paper.Point(0.3, -0.25)], false),
+      new Shape([new paper.Point(-0.3, -0.15), new paper.Point(0.3, -0.15)], false),
+      new Shape([new paper.Point(-0.3, 0.15), new paper.Point(0.3, 0.15)], false),
+      new Shape([new paper.Point(-0.3, 0.25), new paper.Point(0.3, 0.25)], false)
+    ]);
+  }
+
+  static inst = new Chest();
+}
+
+
+class Box extends Drawing {
+  constructor() {
+    super([
+      new Shape(Poly.rect(0.6, 0.6)),
+      new Shape([new paper.Point(-0.1, -0.3), new paper.Point(-0.1, 0.3)], false),
+      new Shape([new paper.Point(0.1, -0.3), new paper.Point(0.1, 0.3)], false)
+    ]);
+  }
+
+  static inst = new Box();
+}
+
+
+class Barrel extends Drawing {
+  constructor() {
+    let r = 0.25, s = Math.cos(Math.PI/6);
+    let r2 = r / 2, rs = r * s;
+    super([
+      new Shape(Poly.regular(16, r)),
+      new Shape([new paper.Point(-r, 0), new paper.Point(r, 0)], false),
+      new Shape([new paper.Point(-rs, -r2), new paper.Point(rs, -r2)], false),
+      new Shape([new paper.Point(-rs, r2), new paper.Point(rs, r2)], false)
+    ]);
+  }
+
+  static inst = new Barrel();
+}
+
+
+class Fountain extends Drawing {
+  constructor() {
+    let r = 0.5;
+    super([
+      new Shape(Poly.regular(24, r)),
+      new WaterShape(Poly.regular(24, r * 0.8)),
+      new Shape(Poly.regular(12, r * 0.2))
+    ]);
+  }
+
+  static inst = new Fountain();
+}
+
+
+class Dais extends Drawing {
+  constructor() {
+    let r1 = 1.50, r2 = 1.25, da = 11.25 /* degrees */;
+    let poly = [], p;
+    for (let i = -8; i < 9; i++) {
+      p = new paper.Point({length: r1, angle: 180 + i * da});
+      poly.push(p.add([0.5, 0]));
+    }
+    let shape1 = new NoStokeShape(poly);
+    let shape2 = new Shape(poly);
+    shape2.closed = false;
+
+    poly = [];
+    for (let i = -8; i < 9; i++) {
+      p = new paper.Point({length: r2, angle: 180 + i * da});
+      poly.push(p.add([0.5, 0]));
+    }
+    let shape3 = new Shape(poly);
+    shape3.closed = false;
+
+    super([shape1, shape2, shape3]);
+  }
+
+  static inst = new Dais();
+}
+
+
+class SmallDais extends Drawing {
+  constructor() {
+    super([new Shape(Poly.regular(32, 1.25)), new NoFillShape(Poly.regular(32, 1))]);
+  }
+
+  static inst = new SmallDais();
+}
+
+
+class Room extends paper.Rectangle {
+  /**
+   * Construct a Room instance.
+   * @param {paper.Point} origin
+   * @param {paper.Point} axis
+   * @param {number} width the width of this room.
+   * @param {number} depth the height of this room.
+   * @param {number} mirror
+   * @return {Room} this Room instance.
+   */
+  constructor(origin, axis, width, depth, mirror=1) {
+    let tl = new paper.Point(), sz = new paper.Size();
+    if (Dot_UP.equals(axis)) {
+      tl.set(origin.x - (width >> 1), origin.y - depth + 1);
+      sz.set(width, depth);
+    } else if (Dot_DOWN.equals(axis)) {
+      tl.set(origin.x - (width >> 1), origin.y);
+      sz.set(width, depth);
+    } else if (Dot_LEFT.equals(axis)) {
+      tl.set(origin.x - depth + 1, origin.y - (width >> 1));
+      sz.set(depth, width);
+    } else if (Dot_RIGHT.equals(axis)) {
+      tl.set(origin.x, origin.y - (width >> 1));
+      sz.set(depth, width);
+    } else {
+      console.log(`Room(origin=${origin}, axis=${axis}, width=${width}, depth=${depth}, mirror=${mirror})`);
+      tl.set(origin.x, 0);  // TODO: check this in com_watabou_dungeon_model_Room
+      sz.set(width, 0);  // TODO: check this in com_watabou_dungeon_model_Room
+    }
+    super(tl, sz);
+    this.hidden = false;
+    this.enemy = false;
+    this.key = false;
+    this.loot = false;
+    this.gate = false;
+    this.event = false;
+    this.enviro = false;
+    this.round = false;
+    this.columns = false;
+    this.dungeon = null;
+    this.desc = null;
+    this.origin = origin;
+    this.axis = axis;
+    this.mirror = mirror;
+    this.props = [];
+    this.width = width;
+    this.depth = depth;
+    this.inner = this.expand(-1);
+  }
+
+  /**
+   * @param {paper.Point} p
+   * @return {paper.Point|null}
+   */
+  out(p) {
+    if (p.x == this.left) {
+      return Dot_LEFT;
+    }
+    if (p.x == this.right - 1) {
+      return Dot_RIGHT;
+    }
+    if (p.y == this.top) {
+      return Dot_UP;
+    }
+    if (p.y == this.bottom - 1) {
+      return Dot_DOWN;
+    }
+    return null;
+  }
+
+  /**
+   * @return {boolean}
+   */
+  isCorridor() {
+    return (this.width == 3 && this.height > 3) || (this.height == 3 && this.width > 3);
+  }
+
+  /**
+   * @return {boolean}
+   */
+  isJunction() {
+    return this.width == 3 && this.height == 3;
+  }
+
+  /**
+   * @return {boolean}
+   */
+  isNormal() {
+    return this.width > 3 && this.height > 3;
+  }
+
+  /**
+   * @return {string}
+   */
+  word() {
+    if (this.isNormal()) {
+      let innerArea = this.inner.area;
+      if (innerArea >= 21) {
+        return Random.choose(['large room', 'large chamber', 'hall']);
+      }
+      if (innerArea >= 15) {
+        return Random.choose(['room', 'chamber']);
+      }
+      return Random.choose(['small room', 'small chamber']);
+    }
+    return Random.choose(['corridor', 'passage']);
+  }
+
+  /**
+   * @return {paper.Point[]}
+   */
+  getPoly() {
+    let poly = [];
+    if (this.round) {
+      let n = 36, c = this.inner.center;
+      let r = Math.sqrt(this.inner.width * this.inner.width + 1) / 2;
+      let p = c.add([r, 0]);
+      for (let i = 0; i < n; i++) {
+        poly.push(p.rotate(360 * i / n, c));
+      }
+    } else {
+      poly = [
+        this.topLeft,
+        this.topRight,
+        this.bottomRight,
+        this.bottomLeft
+      ];
+    }
+    return poly;
+  }
+
+  /**
+   * @return {paper.Rectangle}
+   */
+  getHatchingArea() {
+    if (this.round) {
+      let c = this.inner.center, r = this.inner.width / 2;
+      return new paper.Path.Circle(c.multiply(30), r * 30);
+    }
+    return new paper.Path.Rectangle(this.inner.point.multiply(30), this.inner.size.multiply(30));
+  }
+
+  /**
+   * @return {paper.Point[]}
+   */
+  getSeams() {
+    return [];
+  }
+
+  /**
+   * @param {number} px
+   * @param {number} py
+   * @return {paper.Point}
+   */
+  xy(px, py) {
+    return new paper.Point(
+      this.origin.x - px * this.axis.y * this.mirror + py * this.axis.x,
+      this.origin.y + py * this.axis.y + px * this.axis.x * this.mirror
+    );
+  }
+
+  /**
+   * @return {Door[]}
+   */
+  getDoors() {
+    return this.dungeon.doors.map(door => this.equals(door.from) || this.equals(door.to));
+  }
+
+  /**
+   * @return {Door|null}
+   */
+  getDoor(room) {
+    let doors = this.dungeon.doors.filter(
+      door => (this.equals(door.from) && room.equals(door.to)) || (room.equals(door.from) && this.equals(door.to))
+    );
+    return doors.length > 0 ? doors[0] : null;
+  }
+
+  /**
+   * @return {Door|null}
+   */
+  getDoorW() {
+    let doors = this.dungeon.doors.filter(
+      door => door.x == this.left && door.y >= this.top && door.y < this.bottom
+    );
+    return doors.length > 0 ? doors[0] : null;
+  }
+
+  /**
+   * @return {Door|null}
+   */
+  getDoorE() {
+    let doors = this.dungeon.doors.filter(
+      door => door.x == this.right - 1 && door.y >= this.top && door.y < this.bottom
+    );
+    return doors.length > 0 ? doors[0] : null;
+  }
+
+  /**
+   * @return {Door|null}
+   */
+  getDoorN() {
+    let doors = this.dungeon.doors.filter(
+      door => door.y == this.top && door.x >= this.left && door.x < this.right
+    );
+    return doors.length > 0 ? doors[0] : null;
+  }
+
+  /**
+   * @return {Door|null}
+   */
+  getDoorS() {
+    let doors = this.dungeon.doors.filter(
+      door => door.y == this.bottom - 1 && door.x >= this.left && door.x < this.right
+    );
+    return doors.length > 0 ? doors[0] : null;
+  }
+
+  /**
+   * @param {paper.Point} axis
+   * @return {Door|null}
+   */
+  getWallDoor(axis) {
+    if (Dot_LEFT.equals(axis)) {
+      return this.getDoorW();
+    }
+    if (Dot_RIGHT.equals(axis)) {
+      return this.getDoorE();
+    }
+    if (Dot_UP.equals(axis)) {
+      return this.getDoorN();
+    }
+    if (Dot_DOWN.equals(axis)) {
+      return this.getDoorS();
+    }
+    return null;
+  }
+
+  /**
+   * @param {paper.Point} axis
+   * @return {boolean}
+   */
+  isSolid(axis) {
+    let door = this.getWallDoor(axis);
+    return door == null || door.type == Door.SECRET;
+  }
+
+  /**
+   * @return {Door|null}
+   */
+  getEntrance() {
+    let doors = this.dungeon.doors.filter(door => this.equals(door.to));
+    return doors.length > 0 ? doors[0] : null;
+  }
+
+  /**
+   * @return {Door[]}
+   */
+  getExits() {
+    return this.dungeon.doors.filter(door => this.equals(door.from));
+  }
+
+  /**
+   * @return {boolean}
+   */
+  checkDesc(words) {
+    if (this.desc == null) {
+      return false;
+    }
+    let desc = this.desc.toLowerCase();
+    return words.some(w => desc.includes(w));
+  }
+
+  /**
+   * @return {boolean}
+   */
+  aisleAvailable() {
+    let door = this.dungeon.getDoor(this.xy(0, this.depth - 1));
+    return door == null || door.type == Door.SECRET;
+  }
+
+  /**
+   * @param {number} size
+   * @return {paper.Point}
+   */
+  scatter(size) {
+    if (this.round) {
+      let c = this.center;
+      let p = new paper.Point({
+        length: (this.inner.width - size) / 2 * Random.pow(0.25),
+        angle: Random.float(360)
+      });
+      return p.add(c);
+    }
+    let px = Random.pow(1/3) * (Random.maybe(0.5) ? 0.5 : -0.5) + 0.5;
+    let py = Random.pow(1/3) * (Random.maybe(0.5) ? 0.5 : -0.5) + 0.5;
+    return new paper.Point(
+      this.inner.x + size / 2 + px * (this.inner.width - size),
+      this.inner.y + size / 2 + py * (this.inner.height - size)
+    );
+  }
+
+  /**
+   * @return {paper.Point}
+   */
+  aisle() {
+    return this.xy(0, this.depth - 2).add(0.5);
+  }
+
+  createProps() {
+    let area = this.inner.area;
+    let crumbling = this.dungeon.tags.includes('crumbling');
+    let nRubble = Random.int(1, area / (crumbling ? 2 : 4) + 1);
+    if (this.checkDesc(['rubble', 'debris'])) {
+      nRubble += 3;
+    }
+    while (nRubble-- > 0) {
+      let f = Random.float();
+      let size = 0.1 + (crumbling ? 0.6 : 0.4) * (f * f * f);
+      let p = this.scatter(size);
+      this.props.push(Boulder.random().place(p, Random.float(180), size));
+    }
+    let aisleAvailable = this.aisleAvailable();
+    let object =
+      this.checkDesc(['throne']) && aisleAvailable ? this.addThrone() :
+        this.checkDesc(['well']) && aisleAvailable ? this.addWell() :
+          this.checkDesc(['statue', 'sculpture']) && aisleAvailable ? this.addStatue() :
+            this.checkDesc(['sarcophagus', 'coffin']) && aisleAvailable ? this.addSarcophagus() :
+              this.checkDesc(['altar', 'pedestal']) && aisleAvailable ? this.addAltar() :
+                this.checkDesc(['chest']) && aisleAvailable ? this.addChest() :
+                  this.checkDesc(['crate', 'box', 'trunk']) && !this.columns ? this.addCrate() :
+                    this.checkDesc(['tapestry']) && !this.round ? this.addTapestry() : null;
+    if (this.checkDesc(['pool', 'puddle'])) {
+      this.addPool();
+    }
+    if (this.isNormal() && !this.columns && !this.dungeon.planner.isSpecial(this) && object == null) {
+      if (this.desc == null && Random.maybe(this.dungeon.config.fountainChance)) {
+        this.dungeon.config.fountainChance /= 2;
+        this.addFountain();
+      } else if (this.desc == null && Random.maybe(this.dungeon.config.wellChance * (this.round ? 2 : 1))) {
+        this.dungeon.config.wellChance = 0;
+        this.props.push(Well.inst.place(this.center));
+      } else {
+        if (Random.maybe(1/3)) {
+          let n = Random.float(area / 5);
+          if (Random.maybe(2/3)) {
+            while (n-- > 0) {
+              this.addCrate();
+            }
+          } else {
+            let size = 0.6 + 0.4 * Random.times(3);
+            while (n-- > 0) {
+              this.addBarrel(size);
+            }
+          }
+        }
+      }
+      if (!this.round) {
+        let door = this.dungeon.getDoor(this.xy(0, this.depth - 1));
+        if ((door != null && door.type == Door.SECRET) || (door == null && Random.maybe(this.dungeon.config.tapestryChance / this.width))) {
+          this.addTapestry();
+        }
+      }
+    }
+    if (this.equals(this.dungeon.planner.last)) {
+      if (this.width <= 5) {
+        this.columns = false;
+      }
+      if (this.dungeon.tags.includes('multi-level')) {
+        if (Random.maybe(0.5)) {
+          this.props.push(Statue.inst.place(this.center()));
+        } else if (!this.round) {
+          this.props.push(Dais.inst.place(this.aisle(), Utils.axis2angle(this.axis)));
+        }
+      } else {
+        let pos = this.round ? this.center() : this.aisle();
+        let drawing = this.round ? SmallDais.inst : Dais.inst;
+        let rotation = Utils.axis2angle(this.axis);
+        this.props.push(drawing.place(pos, rotation));
+
+        if (this.dungeon.tags.includes('temple')) {
+          drawing = Altar.inst;
+        } else if (this.dungeon.tags.includes('tomb')) {
+          drawing = Sarcophagus.inst;
+          rotation = Utils.axis2angle(this.axis.abs());
+        } else if (this.dungeon.tags.includes('dwelling')) {
+          drawing = Throne.inst;
+        } else {
+          drawing = Statue.inst;
+          rotation = 0;
+        }
+        this.props.push(drawing.place(pos, rotation));
+      }
+    }
+  }
+
+  addTapestry() {
+    let inst = Tapestry.get(this.width - 2);
+    inst.place(this.aisle(), Utils.axis2angle(-this.axis.y, this.axis.x));
+    this.props.push(inst);
+    return inst;
+  }
+
+  addStatue() {
+    let inst = Statue.inst.place(this.aisle());
+    this.props.push(inst);
+    return inst;
+  }
+
+  addSarcophagus() {
+    let inst = Sarcophagus.inst.place(this.aisle(), Utils.axis2angle(this.axis.abs()));
+    this.props.push(inst);
+    return inst;
+  }
+
+  addAltar() {
+    let inst = Altar.inst.place(this.aisle(), Utils.axis2angle(this.axis));
+    this.props.push(inst);
+    return inst;
+  }
+
+  addThrone() {
+    let inst = Throne.inst.place(this.aisle(), Utils.axis2angle(this.axis));
+    this.props.push(inst);
+    return inst;
+  }
+
+  addWell() {
+    let inst = Well.inst.place(this.aisle());
+    this.props.push(inst);
+    return inst;
+  }
+
+  addChest() {
+    let inst = new Chest.inst.place(this.aisle(), Utils.axis2angle(this.axis));
+    this.props.push(inst);
+    return inst;
+  }
+
+  addCrate() {
+    let size = 0.4 + 0.6 * Random.times(3);
+    let p = this.scatter(size);
+    let inst = Box.inst.place(p, Random.float(180), size);
+    this.props.push(inst);
+    return inst;
+  }
+
+  addBarrel(size) {
+    let p = this.scatter(size);
+    let inst = Barrel.inst.place(p, Random.float(180), size);
+    this.props.push(inst);
+    return inst;
+  }
+
+  addPool() {
+    this.dungeon.flood.addPool(this.topLeft.add(1));
+  }
+
+  addFountain() {
+    let size = Math.sqrt((Math.min(this.width, this.height) - 2) / 3) * 1.5;
+    let inst = Fountain.inst.place(this.center(), 0, size);
+    this.props.push(inst);
+    return inst;
+  }
+
+  canBeRound() {
+    if (this.width != this.height || this.width <= 3) {
+      return false;
+    }
+    let w2 = this.width >> 1, d2 = this.depth >> 1;
+    let a = this.xy(0, 0);
+    let b = this.xy(-w2, d2);
+    let c = this.xy(w2, d2);
+    let d = this.xy(0, this.depth - 1);
+    return this.getDoors().every(door => a.equals(door) || b.equals(door) || c.equals(door) || d.equals(door));
+  }
+
+  getBounds(angle=0) {
+    if (this.round) {
+      return new paper.Rectangle(this.center.rotate(angle).subtract(this.width / 2), new paper.Size(this.width, this.width));
+    } else {
+      let poly = new paper.Path.Rectangle(this);
+      poly.rotate(angle, [0, 0]);
+      let bounds = poly.bounds.clone();
+      poly.remove();
+      return bounds;
+    }
+  }
+
+  getGrown() {
+    if (Dot_UP.equals(this.axis)) {
+      return new paper.RectRectangle(this.left, this.top - 1, this.width, this.height + 1);
+    }
+    if (Dot_DOWN.equals(this.axis)) {
+      return new paper.RectRectangle(this.left, this.top, this.width, this.height + 1);
+    }
+    if (Dot_LEFT.equals(this.axis)) {
+      return new paper.RectRectangle(this.left - 1, this.top, this.width + 1, this.height);
+    }
+    if (Dot_RIGHT.equals(this.axis)) {
+      return new paper.RectRectangle(this.left, this.top, this.width + 1, this.height);
+    }
+    return null;
+  }
+
+  /**
+   * @param {paper.Layer} layer
+   */
+  drawCorners(layer) {
+    if (!this.round) {
+      let o = this.dungeon.config.strokeNormal * 1.5;
+      if (this.dungeon.getDoor(this.inner.topLeft.subtract([1, 0])) == null && this.dungeon.getDoor(this.inner.topLeft.subtract([0, 1])) == null) {
+        this.drawCorner(layer, this.inner.left * 30 + o, this.inner.top * 30 + o, 1, 0);
+      }
+      if (this.dungeon.getDoor(this.inner.topRight) == null && this.dungeon.getDoor(this.inner.topRight.subtract(1)) == null) {
+        this.drawCorner(layer, this.inner.right * 30 - o, this.inner.top * 30 + o, 0, 1);
+      }
+      if (this.dungeon.getDoor(this.inner.bottomLeft) == null && this.dungeon.getDoor(this.inner.bottomLeft.subtract(1)) == null) {
+        this.drawCorner(layer, this.inner.left * 30 + o, this.inner.bottom * 30 - o, 0, -1);
+      }
+      if (this.dungeon.getDoor(this.inner.bottomRight.subtract([1, 0])) == null && this.dungeon.getDoor(this.inner.bottomRight.subtract([0, 1])) == null) {
+        this.drawCorner(layer, this.inner.right * 30 - o, this.inner.bottom * 30 - o, -1, 0);
+      }
+    }
+  }
+
+  /**
+   * @param {paper.Layer} layer
+   * @param {number} x
+   * @param {number} y
+   * @param {number} rx
+   * @param {number} ry
+   */
+  drawCorner(layer, x, y, rx, ry) {
+    let config = this.dungeon.config;
+    let n2 = config.strokeNormal / 2;
+    let span = 30 - config.strokeNormal * 2;
+    let poly = [
+      new paper.Point(-n2, -n2),
+      new paper.Point(n2 + span * Random.times(3), -n2),
+      new paper.Point(n2, n2),
+      new paper.Point(-n2, n2 + span * Random.times(3))
+    ];
+    Poly.asRotateYX(poly, ry, rx);
+    Poly.asTranslate(poly, x, y);
+    layer.addChild(new paper.Path({
+      segments: Poly.chaikinRender(poly, true, 2, [poly[0]]),
+      fillColor: config.colorInk,
+      closed: true
+    }));
+  };
+
+  /**
+   * @param {paper.Layer} layer
+   */
+  drawGrid(layer) {
+    let config = this.dungeon.config;
+    if (config.showProps && this.isNormal()) {
+      this.drawCracks(layer);
+    }
+    if (config.gridMode == GridType_HIDDEN) {
+      return;
+    }
+
+    if (this.round) {
+      this.drawCircGrid(layer);
+    } else {
+      this.drawRectGrid(layer);
+    }
+  }
+
+  /**
+   * @param {paper.Layer} layer
+   */
+  drawCracks(layer) {
+    let r = this.round ? Math.sqrt(Math.pow(this.width - 2, 2) + 1) / 2 : 0;
+    let p = this.round ? Math.PI * r : 2 * (this.width + this.depth - 4);
+    let n = p * Random.times(3) * this.dungeon.config.crackChance;
+    for (let i = 0; i < n; i++) {
+      let pos = this.center.clone();
+      let dir = null;
+      if (this.round) {
+        dir = new paper.Point({length: 1, angle: Random.float(360)});
+        let q = dir.multiply(r);
+        pos.x += q.x;
+        pos.y += q.y;
+      } else {
+        let a, b;
+        switch (Random.int(3)) {
+          case 0:
+            p = this.axis;
+            a = this.depth;
+            b = this.width;
+            break;
+          case 1:
+            p = this.axis.rotate(90);
+            a = this.width;
+            b = this.depth;
+            break;
+          case 2:
+            p = this.axis.rotate(-90);
+            a = this.width;
+            b = this.depth;
+            break;
+        }
+        if (this.isSolid(p)) {
+          dir = p;
+          pos = pos.add(dir.multiply(a / 2 - 1).add(dir.rotate(90).multiply(Random.float(b / 2 - 2))));
+        }
+      }
+      if (dir != null) {
+        this.drawCrack(layer, pos, dir, Math.random());
+      }
+    }
+  }
+
+  /**
+   * @param {paper.Layer} layer
+   * @param {paper.Point} pos
+   * @param {paper.Point} dir
+   * @param {number} size
+   */
+  drawCrack(layer, pos, dir, size) {
+    let segs = Math.ceil(size * 5);
+    dir = dir.multiply(-30 * size / segs);
+    pos = pos.multiply(30);
+    let poly = [pos.subtract(dir.normalize(0.5 * this.dungeon.config.strokeThick)), pos];
+    let t = Random.maybe(0.5) ? 1 : -1;
+    for (let i = 0; i < segs; i++) {
+      t = -t;
+      pos = pos.add(dir.rotate(t * Random.float(45)));
+      poly.push(pos);
+    }
+    this.drawStroke(layer, poly, this.dungeon.config.strokeThick * size);
+  }
+
+  /**
+   * @param {paper.Layer} layer the layer to put this stroke.
+   * @param {paper.Point[]} poly the points of this stroke path.
+   * @param {number} start the stroke size in beginning.
+   * @param {number} end the stroke size at the end.
+   */
+  drawStroke(layer, poly, start, end=0) {
+    let polyLength = Poly.pathLength(poly);
+    let progress = 0;
+    let p1 = poly[0];
+    let p2 = poly[1];
+    let v1 = p2.subtract(p1);
+    let delta = v1.length;
+    v1 = v1.normalize();
+    let n = v1.rotate(90).multiply(start / 2);
+    let a = [p1.add(n)];
+    let b = [p1.subtract(n)];
+    for (let i = 2; i < poly.length; i++) {
+      progress += delta;
+      p1 = p2;
+      p2 = poly[i];
+      let v0 = v1;
+      v1 = p2.subtract(p1);
+      delta = v1.length;
+      v1 = v1.normalize();
+      let cos = Math.sqrt((1 + v0.dot(v1)) / 2); // == cos(thelta/2), thelta is the angle between v0 and v1.
+      let p = progress / polyLength;
+      let strokeWidth = Math.max(Utils.interpolate(start, end, p), 0.1);
+      n = v0.add(v1).rotate(90).normalize(strokeWidth / 2 / cos);
+      a.push(p1.add(n));
+      b.unshift(p1.subtract(n));
+    }
+    n = v1.rotate(90).multiply(end / 2);
+    a.push(p2.add(n));
+    b.unshift(p2.subtract(n));
+    layer.addChild(new Path({
+      segments: a.concat(b),
+      fillColor: this.dungeon.config.colorInk,
+      closed: true
+    }));
+  }
+
+  /**
+   * @param {paper.Layer} layer the layer to put this stroke.
+   */
+  drawRectGrid(layer) {
+    let config = this.dungeon.config;
+    let strokeWidth = config.gridMode == GridType_DOTTED ? config.strokeNormal : config.strokeThin;
+    let x, y;
+    for (let i = 1; i < this.height; i++) {
+      y = (this.top + i) * 30;
+      layer.addChild(new paper.Path.Line({
+        from: [this.left * 30, y],
+        to: [this.right * 30, y],
+        strokeWidth: strokeWidth,
+        strokeColor: config.colorInk,
+        dashArray: config.gridPattern
+      }));
+    }
+    for (let i = 1; i < this.width; i++) {
+      x = (this.left + i) * 30;
+      layer.addChild(new paper.Path.Line({
+        from: [x, this.top * 30],
+        to: [x, this.bottom * 30],
+        strokeWidth: strokeWidth,
+        strokeColor: config.colorInk,
+        dashArray: config.gridPattern
+      }));
+    }
+  }
+
+  /**
+   * @param {paper.Layer} layer the layer to put this stroke.
+   */
+  drawCircGrid(layer) {
+    let config = this.dungeon.config;
+    let strokeWidth = config.gridMode == GridType_DOTTED ? config.strokeNormal : config.strokeThin;
+    let c = this.center;
+    let r = this.width * 30 / 2;
+    let x, y, s;
+    for (let i = 1; i < this.height; i++) {
+      s = Math.cos(Math.asin(i / this.height * 2 - 1)) * r;
+      x = (this.left + i) * 30;
+      y = (this.top + i) * 30;
+      layer.addChild(new paper.Path.Line({
+        from: [c.x * 30 + s, y],
+        to: [c.x * 30 - s, y],
+        strokeWidth: strokeWidth,
+        strokeColor: config.colorInk,
+        dashArray: config.gridPattern
+      }));
+      layer.addChild(new paper.Path.Line({
+        from: [x, c.y * 30 + s],
+        to: [x, c.y * 30 - s],
+        strokeWidth: strokeWidth,
+        strokeColor: config.colorInk,
+        dashArray: config.gridPattern
+      }));
+    }
+  }
+
+  /**
+   * @param {paper.Layer} layer the layer to put this stroke.
+   */
+  drawColonnades(layer) {
+    if (!this.columns) {
+      return;
+    }
+
+    // TODO: directly create circle or rectangle path for the room.
+
+    let inner = this.inner;
+    if (this.round) {
+      let R = inner.w / 2 - 1;
+      let n = Math.floor(Math.PI * R / 2) * 4;
+      for (let i = 0; i < n; i++) {
+        let a = (i + 0.5) / n * 360;
+        let p = new paper.Point({length:R, angle:a}).add(inner.center());
+        this.drawColumn(layer, p.multiply(30), a);
+      }
+    } else if (this.axis.x != 0) {
+      for (let i = inner.left + 1; i < inner.right; i++) {
+        this.drawColumn(layer, new paper.Point(i * 30, (inner.top + 1) * 30));
+        this.drawColumn(layer, new paper.Point(i * 30, (inner.bottom - 1) * 30));
+      }
+    } else {
+      for (let i = inner.top + 1; i < inner.bottom; i++) {
+        this.drawColumn(layer, new paper.Point((inner.left + 1) * 30, i * 30));
+        this.drawColumn(layer, new paper.Point((inner.right - 1) * 30, i * 30));
+      }
+    }
+  }
+
+  /**
+   * @param {paper.Layer} layer the layer to put this stroke.
+   * @param {paper.Point} pos
+   * @param {number} angle
+   */
+  drawColumn(layer, pos, angle=0) {
+    let config = this.dungeon.config;
+    let strokeColor = config.colorInk;
+    let strokeWidth, fillColor;
+    if (Random.maybe(config.columnShattered)) {
+      strokeWidth = config.strokeNormal;
+      fillColor = config.showBlackAndWhite ? config.colorPaper : config.colorBg;
+    } else {
+      strokeWidth = config.strokeThick;
+      fillColor = config.showBlackAndWhite ? config.colorPaper : config.colorShading;
+    }
+    let r = config.columnRadius * 30;
+    if (config.columnSquare) {
+      let path = new paper.Path.Rectangle({
+        point: pos.subtract(r),
+        size: [r * 2, r * 2],
+        strokeWidth: strokeWidth,
+        strokeColor: strokeColor,
+        fillColor: fillColor
+      })
+      if (angle != 0) {
+        path.rotate(angle, [0, 0]);
+      }
+      layer.addChild(path);
+    } else {
+      layer.addChild(new paper.Path.Circle({
+        center: pos,
+        radius: r,
+        strokeWidth: strokeWidth,
+        strokeColor: strokeColor,
+        fillColor: fillColor
+      }));
+    }
+  }
+}
+
+
+class Door extends paper.Point {
+  static EMPTY = 0;
+  static NORMAL = 1;
+  static ARCHWAY = 2;
+  static STAIRS = 3;
+  static PORTCULLIS = 4;
+  static SPECIAL = 5;
+  static SECRET = 6;
+  static BARRED = 7;
+  static EXIT = 8;
+
+  static front = [new paper.Point(15, -15), new paper.Point(15, 15)];
+
+  /**
+   * @param {paper.Point} pos
+   * @param {Room} from
+   * @param {Room} to
+   */
+  constructor(pos, from, to) {
+    super(pos);
+    this.from = from;
+    this.to = to;
+    this.type = Door.autoType(from, to);
+    this.dir = null;
+    if (from != null) {
+      this.dir = from.out(this);
+    } else if (to != null) {
+      this.dir = to.out(this).rotate(180);
+    }
+  }
+
+  /**
+   * @param {Room} from
+   * @param {Room} to
+   */
+  static autoType(from, to) {
+    if (to == null) {
+      return Door.EXIT;
+    }
+    if (from == null) {
+      return Door.STAIRS;
+    }
+    if (!from.isNormal() && !to.isNormal()) {
+      return Door.EMPTY;
+    }
+    return Random.choose([Door.EMPTY, Door.NORMAL, Door.ARCHWAY]);
+  }
+
+  getPoly() {
+    let poly;
+    switch (this.type) {
+      case Door.NORMAL:
+      case Door.ARCHWAY:
+      case Door.PORTCULLIS:
+      case Door.SPECIAL:
+        poly = [
+          new paper.Point(-0.5, -0.5),  //
+          new paper.Point(0.5, -0.5),   //  +--------+
+          new paper.Point(0.5, -0.25),  //  |        |
+          new paper.Point(0.3, -0.25),  //  +--+  +--+
+          new paper.Point(0.3, 0.25),   //     |  |
+          new paper.Point(0.5, 0.25),   //  +--+  +--+
+          new paper.Point(0.5, 0.5),    //  |        |
+          new paper.Point(-0.5, 0.5),   //  +--------+
+          new paper.Point(-0.5, 0.25),  //
+          new paper.Point(-0.3, 0.25),  //
+          new paper.Point(-0.3, -0.25), //
+          new paper.Point(-0.5, -0.25)  //
+        ];
+        Poly.asRotateYX(poly, -this.dir.x, this.dir.y);
+        Poly.asTranslate(poly, this.add(0.5));
+        return poly;
+      case Door.SECRET:
+        poly = Poly.rect(1, 0.5);
+        Poly.asTranslate(poly, 0, 0.25);
+        Poly.asRotateYX(poly, -this.dir.x, this.dir.y);
+        Poly.asTranslate(poly, this.add(0.5));
+        return poly;
+      case Door.BARRED:
+        poly = [
+          new paper.Point(-0.5, 0.5),  //
+          new paper.Point(0.5, 0.5),   //
+          new paper.Point(0.5, 0),     //     +--+
+          new paper.Point(0.3, 0),     //     |  |
+          new paper.Point(0.3, -0.5),  //  +--+  +--+
+          new paper.Point(-0.3, -0.5), //  |        |
+          new paper.Point(-0.3, 0),    //  +--------+
+          new paper.Point(-0.5, 0)     //
+        ];
+        Poly.asRotateYX(poly, -this.dir.x, this.dir.y);
+        Poly.asTranslate(poly, this.add(0.5));
+        return poly;
+      default:
+        return [
+          new paper.Point(this.x, this.y),         //  +---+
+          new paper.Point(this.x + 1, this.y),     //  |   |
+          new paper.Point(this.x + 1, this.y + 1), //  +---+
+          new paper.Point(this.x, this.y + 1)      //
+        ];
+    }
+  }
+
+  getHatchingArea() {
+    return new paper.Path.Rectangle(this.x * 30, this.y * 30, 30, 30);
+  }
+
+  getSeams() {
+    let seams = [];
+    switch (this.type) {
+      case Door.STAIRS:
+      case Door.SECRET:
+        seams = [[new paper.Point(0.5, -0.5), new paper.Point(0.5, 0.5)]];
+        break;
+      case Door.EXIT:
+        seams = [[new paper.Point(-0.5, -0.5), new paper.Point(-0.5, 0.5)]];
+        break;
+      default:
+        seams = [
+          [new paper.Point(0.5, -0.5), new paper.Point(0.5, 0.5)],
+          [new paper.Point(-0.5, -0.5), new paper.Point(-0.5, 0.5)]
+        ];
+    }
+    for (let seam of seams) {
+      Poly.asRotateYX(seam, this.dir.y, this.dir.x);
+      Poly.asTranslate(seam, this.add(0.5));
+    }
+    return seams;
+  }
+
+  /**
+   * @param {paper.Layer} layer
+   * @param {Map} config
+   */
+  drawGrid(layer, config) {
+    if (config.gridMode == GridType_HIDDEN) {
+      return;
+    }
+    switch (this.type) {
+      case Door.STAIRS:
+      case Door.SECRET:
+      case Door.BARRED:
+        layer.addChild(this.frontPath(config, true));
+        break;
+      case Door.EXIT:
+        break;
+      default:
+        layer.addChild(this.frontPath(config, true));
+        layer.addChild(this.frontPath(config, false));
+    }
+  }
+
+  /**
+   * @param {Map} config the style config
+   * @param {boolean} toOrFrom `true` if to this door, `false` otherwise.
+   * @param {paper.Path}
+   */
+  frontPath(config, toOrFrom) {
+    let i = toOrFrom ? 1 : -1;
+    let line = Poly.rotateYX(Door.front, i * this.dir.y, i * this.dir.x);
+    Poly.asTranslate(line, this.add(0.5).multiply(30));
+    return new paper.Path({
+      segments: line,
+      strokeWidth: config.gridMode == GridType_DOTTED ? config.strokeNormal : config.strokeThin,
+      strokeColor: config.colorInk,
+      dashArray: config.gridPattern
+    });
+  }
+
+  /**
+   * @param {paper.Layer} layer the layer to put this stroke.
+   * @param {Map} config
+   */
+  draw(layer, config) {
+    let thick = config.hatchingStyle == 'Stonework' || config.hatchingStyle == 'Bricks' ? config.strokeNormal : config.strokeThick;
+    let white = config.blackAndWhite ? config.colorPaper : config.colorBg;
+    let dir = this.dir;
+    let pos = this.add(0.5).multiply(30);
+    let size;
+    switch (this.type) {
+      case Door.NORMAL:
+      case Door.SPECIAL:
+        if (dir.y != 0) {
+          size = new paper.Point(18 + thick, 7.5);
+        } else {
+          size = new paper.Point(7.5, 18 + thick);
+        }
+        layer.addChild(new paper.Path.Rectangle({
+          point: pos.subtract(size.divide(2)),
+          size: size,
+          strokeWidth: thick,
+          strokeColor: config.colorInk,
+          fillColor: white
+        }));
+        if (this.type == Door.SPECIAL) {
+          layer.addChild(new paper.Path.Line({
+            from: pos.subtract(dir.multiply(30/8)),
+            to: pos.add(dir.multiply(30/8)),
+            strokeWidth: thick,
+            strokeColor: config.colorInk
+          }));
+        }
+        break;
+      case Door.PORTCULLIS:
+        for (let i = -1; i < 2; i++) {
+          layer.addChild(new paper.Path.Circle({
+            center: pos.add(dir.multiply(18 * i / 3)),
+            radius: thick / 2,
+            fillColor: config.colorInk
+          }));
+        }
+        break;
+      case Door.BARRED:
+        if (dir.y != 0) {
+          size = new paper.Point(18, 7.5);
+        } else {
+          size = new paper.Point(7.5, 18);
+        }
+        layer.addChild(new paper.Path.Rectangle({
+          point: pos.subtract(size.divide(2)),
+          size: size,
+          strokeWidth: thick,
+          strokeColor: config.colorInk,
+          fillColor: white
+        }));
+
+        let d = dir.multiply(9).rotate(90);
+        layer.addChild(new paper.Path.Line({
+          from: pos.subtract(d),
+          to: pos.add(d),
+          strokeWidth: config.strokeNormal,
+          strokeColor: config.colorInk
+        }));
+        break;
+      case Door.STAIRS:
+      case Door.EXIT:
+        for (let i = 1; i < 5; i++) {
+          let w2 = 30 * (5 - i) / 5 * 0.5;
+          let s = 30 * i / 5 - 15;
+          let d1 = dir.multiply(s);
+          let d2 = dir.multiply(w2).rotate(90);
+            layer.addChild(new paper.Path.Line({
+            from: pos.add(d1).subtract(d2),
+            to: pos.add(d1).add(d2),
+            strokeWidth: config.strokeNormal,
+            strokeColor: config.colorInk
+          }));
+        }
+        break;
+    }
+  }
+}
+
+
+class Flood {
+  /**
+   * @param {MapGenerator} dungeon
+   * @param {number} level
+   * @return {Flood}
+   */
+  constructor(dungeon, level=0.3) {
+    this.align = true;
+    this.scale = 1;
+    this.dungeon = dungeon;
+    this.rect = dungeon.getRect();
+    this.width = this.rect.width * this.scale;
+    this.height = this.rect.height * this.scale;
+    let size = Math.max(this.width, this.height);
+    let octaves = Random.log(Math.log(size) / Math.log(2));
+    this.map = new PerlinNoise().noiseMapHigh(size, size, octaves, 1, 0.5 + 0.3 * Math.abs(Random.times(4) * 2 - 1));
+    this.min = Infinity;
+    this.max = -Infinity;
+    for (let row of this.map) {
+      for (let v of row) {
+        if (this.min > v) {
+          this.min = v;
+        }
+        if (this.max < v) {
+          this.max = v;
+        }
+      }
+    }
+    this.pools = [];
+    this.edges = [];
+    this.ripples1 = [];
+    this.ripples2 = [];
+    if (level > 0) {
+      this.setLevel(level);
+    }
+  }
+
+  /**
+   * @param {paper.Point} pos
+   */
+  addPool(pos) {
+    this.pools.push(pos);
+  }
+
+  /**
+   * @param {number} lvl
+   */
+  setLevel(lvl) {
+    let threshold = Utils.interpolate(this.min, this.max, lvl);
+    this.bitmap = new Array(this.map.length).fill(new Array(this.map[0].length).fill(false));
+
+    let x, y;
+    let rect = this.dungeon.getRect();
+    for (let r of this.dungeon.rooms) {
+      let r1 = new paper.Rect(r.point.subtract(rect.point), r.size);
+      for (y = r1.top + 1; y < r1.bottom - 1; y++) {
+        for (x = r1.left + 1; x < r1.right - 1; x++) {
+          this.bitmap[y][x] = this.map[y][x] < threshold;
+        }
+      }
+      for (y = r1.top + 1; y < r1.bottom - 1; y++) {
+        x = r1.left;
+        this.bitmap[y][x] = this.bitmap[y][x] || this.bitmap[y][x + 1];
+        x = r1.right - 1;
+        this.bitmap[y][x] = this.bitmap[y][x] || this.bitmap[y][x - 1];
+      }
+      for (x = r1.left + 1; x < r1.right - 1; x++) {
+        y = r1.top;
+        this.bitmap[y][x] = this.bitmap[y][x] || this.bitmap[y + 1][x];
+        y = r1.bottom - 1;
+        this.bitmap[y][x] = this.bitmap[y][x] || this.bitmap[y - 1][x];
+      }
+    }
+    this.pools.forEach(pool => this.bitmap[pool.y - rect.y][pool.x - rect.x] = true);
+    this.ofs = new paper.Point(0.5 / this.scale, 0.5 / this.scale);
+    this.points = new Array(this.height + 1).fill(new Array(this.width + 1).fill(null));
+    let segments = this.buildSegments();
+    this.edges = this.linkSegments(segments);
+    this.ripples1 = this.edges.map(poly => this.offset(poly, 0.2 / this.scale));
+    this.ripples2 = this.edges.map(poly => this.offset(poly, 0.4 / this.scale));
+  }
+
+  /**
+   * @param {number} x
+   * @param {number} y
+   * @return {paper.Point}
+   */
+  gp(x, y) {
+    let p = this.points[y][x];
+    if (p == null) {
+      p = new paper.Point(x / this.scale + this.rect.x, y / this.scale + this.rect.y);
+      p = p.add(new paper.Point({length: 0.3 / this.scale * (Random.times(3) * 2 - 1), angle: Random.float(180)}));
+      if (!this.align) {
+        p = p.add(this.ofs);
+      }
+      this.points[y][x] = p;
+    }
+    return p;
+  }
+
+  /**
+   * @return {Segment[]}
+   */
+  buildSegments() {
+    let segments = [];
+    for (let y = 0; y < this.height; y++) {
+      for (let x = 0; x < this.width; x++) {
+        if (this.bitmap[y][x]) {
+          if (y == 0 || !this.bitmap[y - 1][x]) {
+            segments.push(new Segment(this.gp(x, y), this.gp(x + 1, y)));
+          }
+          if (y == this.height - 1 || !this.bitmap[y + 1][x]) {
+            segments.push(new Segment(this.gp(x + 1, y + 1), this.gp(x, y + 1)));
+          }
+          if (x == 0 || !this.bitmap[y][x - 1]) {
+            segments.push(new Segment(this.gp(x, y + 1), this.gp(x, y)));
+          }
+          if (x == this.width - 1 || !this.bitmap[y][x + 1]) {
+            segments.push(new Segment(this.gp(x + 1, y), this.gp(x + 1, y + 1)));
+          }
+        }
+      }
+    }
+    return segments;
+  }
+
+  /**
+   * @param {Segment[]} segments
+   * @return {paper.Point[][]}
+   */
+  linkSegments(segments) {
+    let list = [];
+    while (segments.length > 0) {
+      let segment = segments.shift();
+      let poly = [segment.start, segment.end];
+      while (true) {
+        let toPush = null;
+        for (let s of segments) {
+          if (s.start.equals(poly[poly.length - 1])) {
+            toPush = s;
+            break;
+          }
+        }
+        if (toPush == null) {
+          break;
+        }
+        poly.push(toPush.end);
+        Utils.arrayRemove(segments, toPush);
+      }
+      while (true) {
+        let toUnshift = null;
+        for (let s of segments) {
+          if (s.end.equals(poly[0])) {
+            toUnshift = s1;
+            break;
+          }
+        }
+        if (toUnshift == null) {
+          break;
+        }
+        poly.unshift(toUnshift.start);
+        Utils.arrayRemove(segments, toUnshift);
+      }
+      poly = Poly.resample(poly, 1);
+      poly = Poly.chaikinRender(poly, false);
+      poly = Poly.resample(poly, 0.5);
+      poly.pop();
+      poly = this.wavy(poly, 0.3);
+      list.push(poly);
+    }
+    return list;
+  }
+
+  /**
+   * @param {paper.Point[]} poly
+   * @param {number} d
+   * @return {paper.Point[]}
+   */
+  offset(poly, d=1) {
+    let curve = [];
+    for (let i = 0; i < poly.length; i++) {
+      let t = poly[i].subtract(poly[poly.length - i - 1]);
+      curve.push(poly[i].add(new paper.Point(-t.y, t.x).normalize(d)));
+    }
+    return curve;
+  }
+
+  /**
+   * @param {paper.Point[]} poly
+   * @param {number} d
+   * @return {paper.Point[]}
+   */
+  wavy(poly, d) {
+    let curve = [];
+    for (let i = 0; i < poly.length; i++) {
+      let t = poly[i].subtract(poly[poly.length - i - 1]);
+      d = ((i & 2) == 0 ? d : -d) * (1 - Math.abs(Random.times(4) * 2 - 1)) || 1;
+      curve.push(poly[i].add(new paper.Point(-t.y, t.x).normalize(d)));
+    }
+    return curve;
+  }
+
+  /**
+   * @return {paper.Point[]} the points in any rooms.
+   */
+  getData() {
+    if (this.bitmap == null) {
+      return [];
+    }
+    let tiles = [];
+    for (let i = 0; i < this.height; i++) {
+      for (let j = 0; j < this.width; j++) {
+        if (this.bitmap[i][j]) {
+          let x = j + this.rect.x;
+          let y = i + this.rect.y;
+          if (this.dungeon.rooms.some(room => room.contains(x, y))) {
+            tiles.push(new paper.Point(x,y));
+          }
+        }
+      }
+    }
+    return tiles;
+  }
+}
+
+
+class Segment {
+  /**
+   * @param {paper.Point} start
+   * @param {paper.Point} end
+   * @return {Segment}
+   */
+  constructor(start, end) {
+    this.start = start;
+    this.end = end;
+  }
+}
+
+
+class Graph {
+  constructor() {
+    this.nodes = [];
+  }
+
+  /**
+   * @param {Room} room
+   */
+  add(room) {
+    let node = new Node(room);
+    this.nodes.push(node);
+    return node;
+  }
+
+  /**
+   * @param {Node} node
+   */
+  remove(node) {
+    node.unlinkAll();
+    Utils.arrayRemove(this.nodes, node);
+  }
+
+  /**
+   * @param {Room} room
+   * @return {Node}
+   */
+  getNode(room) {
+    let nodes = this.nodes.filter(node => node.room.equals(room));
+    return nodes.length > 0 ? nodes[0] : null;
+  }
+
+  /**
+   * @param {Node} start
+   * @param {Node} goal
+   * @return {Node[]}
+   */
+  aStar(start, goal) {
+    let closedSet = [];
+    let openSet = [start];
+    let cameFrom = new Map();
+    let gScore = new Map();
+    gScore.set(start, 0);
+    while (openSet.length > 0) {
+      let current = openSet.shift();
+      if (current == goal) {
+        return this.buildPath(cameFrom, current);
+      }
+      Utils.arrayRemove(openSet, current);
+      closedSet.push(current);
+      let curScore = gScore.get(current);
+      let neighbours = current.links.keys();
+      while (neighbours.hasNext()) {
+        let neighbour = neighbours.next();
+        if (Utils.includes(closedSet, neighbour)) {
+          continue;
+        }
+        let score = curScore + current.links.get(neighbour).price;
+        if (!Utils.includes(openSet, neighbour)) {
+          openSet.push(neighbour);
+        } else if (score >= gScore.get(neighbour)) {
+          continue;
+        }
+        cameFrom.set(neighbour, current);
+        gScore.set(neighbour, score);
+      }
+    }
+    return null;
+  }
+
+  /**
+   * @param {Map} cameFrom
+   * @param {Node} current
+   * @return {Node[]}
+   */
+  buildPath(cameFrom, current) {
+    let path = [current];
+    while (cameFrom.get(current) !== undefined) {
+      current = cameFrom.get(current);
+      path.unshift(current);
+    }
+    return path;
+  }
+
+  /**
+   * @param {Node[]} path
+   * @return {number}
+   */
+  calculatePrice(path) {
+    let price = 0;
+    for (let i = 1; i < path.length; i++) {
+      let curr = path[i - 1];
+      let next = path[i];
+      price += curr.links.get(next).price;
+    }
+    return price;
+  }
+}
+
+
+class Node {
+  /**
+   * @param {Room} room
+   * @return {Node}
+   */
+  constructor(room) {
+    this.links = new Map();
+    this.room = room;
+  }
+
+  /**
+   * @param {Node} node
+   * @param {any} edgeData
+   * @param {number} price
+   * @param {boolean} symmetrical
+   */
+  link(node, edgeData, price=1, symmetrical=true) {
+    let edge = new Edge(edgeData, price);
+    this.links.set(node, edge);
+    if (symmetrical) {
+      node.links.set(this, edge);
+    }
+  }
+
+  /**
+   * @param {Node} node
+   * @param {boolean} symmetrical
+   */
+  unlink(node, symmetrical=true) {
+    this.links.remove(node);
+    if (symmetrical) {
+      node.links.remove(this);
+    }
+  }
+
+  unlinkAll() {
+    let nodes = this.links.keys();
+    while (nodes.hasNext()) {;
+      this.unlink(nodes.next());
+    }
+  }
+}
+
+class Edge {
+  /**
+   * @param {any} data
+   * @param {number} price
+   * @return {Edge}
+   */
+  constructor(data, price) {
+    this.data = data;
+    this.price = price;
+  }
+}
+
+
+class Planner {
+  /**
+   * @param {MapGenerator} dungeon
+   * @return {Planner}
+   */
+  constructor(dungeon) {
+    this.dungeon = dungeon;
+    this.graph = dungeon.getGraph();
+    this.wings = new Map();
+    this.secrets = [];
+  }
+
+  plan() {
+    this.entrance = this.dungeon.doors[0];
+    this.first = this.dungeon.rooms[0];
+    this.first.enviro = true;
+    this.buildCulmination();
+    this.buildApproach();
+    this.buildSecrets();
+    this.regular = this.addWing(this.first);
+    this.spawnKeys();
+    let nLoot = Random.log(this.normal(this.dungeon.rooms).length);
+    let available = Utils.subset(this.getAvailable(), nLoot);
+    for (let room of available) {
+      if (!room.key && !room.event) {
+        room.loot = true;
+      }
+    }
+    available = Random.choose(this.getAvailable());
+    for (let room of available) {
+      if (!room.loot && !room.key && !room.enemy) {
+        room.event = true;
+      }
+    }
+    this.rollNotes();
+  }
+
+  buildCulmination() {
+    let fromNode = this.graph.getNode(this.first);
+    let farthest = [];
+    let maxDist = 0;
+    for (let room of this.normal(this.dungeon.rooms)) {
+      let path = this.graph.aStar(fromNode, this.graph.getNode(room));
+      let dist = this.graph.calculatePrice(path);
+      if (this.dungeon.isUnique(room)) {
+        dist *= 2;
+      }
+      if (farthest.length == 0 || dist > maxDist) {
+        farthest = [room];
+        maxDist = dist;
+      } else if (dist == maxDist) {
+        farthest.push(room);
+      }
+    }
+    this.last = Utils.weighted(farthest, farthest.map(r => r.area));
+    this.last.enviro = true;
+    this.last.enemy = true;
+    this.culmination = this.addWing(this.last);
+  }
+
+  buildApproach() {
+    let route = [];
+    let parent = this.last.getEntrance().from;
+    while (parent != null) {
+      route.unshift(parent);
+      parent = parent.getEntrance().from;
+    }
+    route = this.normal(route);
+    let gate;
+    if (route.length > 0) {
+      let from = Random.choose(route);
+      let path = this.graph.aStar(this.graph.getNode(from), this.graph.getNode(this.last));
+      gate = from.getDoor(path[1].room);
+      if (!gate.to.equals(this.last)) {
+        this.approach = this.addWing(gate.to);
+      }
+      let ante = route[route.length - 1];
+      if (!from.equals(ante) && Random.maybe(1 - this.approach.length / this.dungeon.rooms.length)) {
+        this.ante = ante;
+        this.ante.enviro = true;
+        this.ante.enemy = true;
+      }
+    } else {
+      gate = this.last.getEntrance();
+    }
+    gate.type = Door.SPECIAL;
+    this.gateRoom = gate.from;
+    this.gateRoom.gate = true;
+  }
+
+  buildSecrets() {
+    let candidates = this.leaves(this.dungeon.rooms);
+    Utils.arrayRemove(candidates, this.last);
+    let rate = this.dungeon.tags.includes('secret') != -1 ? 2 : 1;
+    for (let room of candidates) {
+      if (!Random.maybe(rate * (this.dungeon.isUnique(room) ? 0.5 : 0.1))) {
+        continue;
+      }
+      while (room != null && !room.isNormal() && room.getExits().length < 2) {
+        room = room.getEntrance().from;
+      }
+      if (room == null || room.equals(this.last) || room.getExits().length > 1) {
+        continue;
+      }
+      room.enviro = true;
+      if (Random.maybe(1/3)) {
+        room.loot = true;
+      } else {
+        room.event = true;
+      }
+      let parent = room.getEntrance().from;
+      while (!parent.isNormal() && parent.getExits().length == 1) {
+        room = parent;
+        parent = room.getEntrance().from;
+      }
+      let wings = this.addWing(room, true);
+      wings.forEach(r => r.getExits().forEach((d) => {
+        if (d.type == Door.NORMAL) {
+          d.type = Door.ARCHWAY;
+        }
+      }));
+      this.secrets.push(room);
+      room.getEntrance().type = Door.SECRET;
+    }
+  }
+
+  spawnKeys() {
+    let rooms = this.normal(this.regular);
+    let leaves = this.leaves(rooms);
+    this.nKeys = Random.choose([0, 0, 1, 1, 1, 1, 2, 2, 3, 3, 4]);
+    if (this.nKeys > leaves.length) {
+      this.nKeys = leaves.length;
+    }
+    Utils.subset(leaves, this.nKeys).forEach(room => room.key = true);
+  }
+
+  /**
+   * @param {Room} start
+   * @param {boolean} overwrite
+   * @return {Room[]}
+   */
+  addWing(start, overwrite=false) {
+    let wing = [];
+    let queue = [start];
+    while (queue.length > 0) {
+      let room = queue.shift();
+      let prevWing = this.getWing(room);
+      if (overwrite || prevWing == null) {
+        if (prevWing != null) {
+          Utils.arrayRemove(this.wings.get(prevWing), room);
+        }
+        wing.push(room);
+        Utils.addAll(queue, room.getExits().map(door => door.to));
+      }
+    }
+    this.wings.set(start, wing);
+    return wing;
+  }
+
+  /**
+   * @param {Room} room
+   * @return {Room}
+   */
+  getWing(room) {
+    for (let [start, rooms] of this.wings) {
+      if (start.equals(room) || Utils.includes(rooms, room)) {
+        return start;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * @param {Room} room
+   * @param {boolean} hidden
+   */
+  hideWing(room, hidden) {
+    this.wings.get(this.getWing(room)).forEach(r => r.hidden = hidden);
+  }
+
+  /**
+   * Tell whether the specific room is a secret one.
+   * @param {Room} room the room to check.
+   * @return {boolean} whether the room is secret.
+   */
+  isSecret(room) {
+    return Utils.includes(this.secrets, this.getWing(room));
+  }
+
+  /**
+   * Tell whether the specific room is special.
+   * @param {Room} room the room to check.
+   * @return {boolean} whether the room is special.
+   */
+  isSpecial(room) {
+    return room.equals(this.first) || room.equals(this.last) || room.equals(this.gateRoom)
+  }
+
+  /**
+   * Find all the normal rooms from sepecific array.
+   * @param {Room[]} rooms the array to search.
+   * @return {Room[]} the found normal rooms.
+   */
+  normal(rooms) {
+    return rooms.filter(room => room.isNormal());
+  }
+
+  /**
+   * Find all the rooms having no exits from sepecific array.
+   * @param {Room[]} rooms the array to search.
+   * @return {Room[]} the found rooms.
+   */
+  leaves(rooms) {
+    return rooms.filter(room => room.getExits().length == 0);
+  }
+
+  /**
+   * Find all the available normal rooms.
+   * @return {Room[]} the found rooms.
+   */
+  getAvailable() {
+    let rooms = this.normal(this.dungeon.rooms);
+    Utils.arrayRemove(rooms, this.first);
+    Utils.arrayRemove(rooms, this.last);
+    Utils.arrayRemove(rooms, this.gateRoom);
+    Utils.arrayRemove(rooms, this.ante);
+    return rooms;
+  }
+
+  rollNotes() {
+    this.dungeon.story.initKeys(this);
+    this.dungeon.rooms.forEach(room => room.desc = this.dungeon.story.getRoomDesc(this, room));
+  }
+
+  /**
+   * @return {Room[]}
+   */
+  getSecrets() {
+    let rooms = [];
+    for (let wing of this.secrets) {
+      Utils.addAll(rooms, this.wings.get(wing));
+    }
+    return rooms;
+  }
+}
+
+
 class MapGenerator {
-  constructor(opts) {
+  constructor(canvasId, opts={}, tags=[]) {
+    this.maxSize = 15;
+    this.minSize = 6;
+    this.style = [0, 0, 0, 1, 2, 3, 3];
+    this.order = [true, true, true, true, false];
+    this.rooms = [];
+    this.doors = [];
+    this.blocks = [];
+    this.planner = null;
+
     this.config = Object.assign({
       noteViewMode: NoteViewMode_NORMAL,
-      style: {}
+      gridMode: GridType_DOTTED,
+      style: PresetMapStyle_DEFAULT,
+      autoRotation: false,
+      rotation: 0,
+      blackAndWhite: false,
+      showTitle: true,
+      showWater: true,
+      showProps: true,
+      showCorners: true,
+      showShadow: true,
+      showSecrets: true,
     }, opts);
+    this.updateGridPattern();
+    paper.setup(canvasId);
+    this.reset(tags);
+  }
+
+  getRect() {
+    // TODO: change this.rooms to paper.Layer, then return this.rooms.bounds
+    let bounds = new paper.Rectangle();
+    for(let room of this.rooms) {
+      bounds = bounds.unite(room);
+    }
+    return bounds;
+  }
+
+  resolveTags(tags=[]) {
+    if (tags) {
+      let success = false, error = 0;
+      while (!success) {
+        for (let i = 0; i < 20; i++) { // try 20 times again and again ...
+          this.tags = [];
+          this.story = new Story(this);
+          if (tags.filter(t => !this.tags.includes(t)).length <= error) {
+            success = true;
+            break;
+          }
+        }
+        ++error;
+      }
+      tags.filter(t => !this.tags.includes(t)).forEach(t => Tags.resolve(this.tags, t));
+    } else {
+      this.tags = [];
+      this.story = new Story(this);
+    }
+  }
+
+  initParameters() {
+    this.config.columnRadius = 1 / (6 + 2 * (Random.times(3) * 2 - 1));
+    this.config.columnSquare = Random.maybe(0.25);
+    this.config.columnShattered = this.tags.includes('crumbling') ? 0.1 : 0.0125;
+    this.config.rotundaChance = this.tags.includes('round') ? 5 : this.tags.includes('square') ? 0 : 1;
+    this.config.colonnadeChance = this.tags.includes('colonnades') ? 2 : 1;
+    this.config.waterLevel = this.tags.includes('dry') ? 0 : this.tags.includes('flooded') ? 6 : this.tags.includes('wet') ? 3 : Math.round(Math.max(6 * Random.times(3) - 2, 0));
+    if (this.config.waterLevel > 0) {
+      this.story.setFlag('water');
+    }
+    this.config.fountainChance = this.tags.includes('tomb') ? 0.02 : 0.1;
+    this.config.wellChance = this.tags.includes('dwelling') ? 0.2 : 0.02;
+    this.config.tapestryChance = this.tags.includes('dwelling') ? 1 : 1/3;
+    if (this.tags.includes('crumbling')) {
+      this.config.tapestryChance /= 3;
+    }
+    if (this.tags.includes('flooded')) {
+      this.config.tapestryChance /= 3;
+    }
+    this.config.crackChance = this.tags.includes('crumbling') ? 1/3 : 0.125;
+    this.config.impassable = Random.choose([Door.PORTCULLIS, Door.BARRED]);
+  }
+
+  reset(tags=[], newDungeon=true) {
+    if (newDungeon) {
+      this.resolveTags(tags);
+      this.initParameters();
+      this.build();
+      let secrets = this.planner.getSecrets();
+      if (secrets.length > 0 && !this.config.showSecrets) {
+        secrets.forEach(room => room.hidden = true);
+      }
+      this.updateDrawable();
+    }
+    this.title.set_text(this.story.name); // TODO
+    this.story.set_text(this.story.hook); // TODO
+    this.drawAll();
+    // this.recreateNotes(); // TODO
+  }
+
+  build() {
+    if (this.tags.includes('small')) {
+      this.minSize = 3; // TODO: rename to minRoomCount
+      this.maxSize = 6; // TODO: rename to maxRoomCount
+    } else if (this.tags.includes('large')) {
+      this.minSize = 12;
+      this.maxSize = 25;
+    }
+    if (this.tags.includes('chaotic')) {
+      this.order = [false];
+    } else if (this.tags.includes('ordered')) {
+      this.order = [true, true, true, true, true, true, false];
+    }
+    if (this.tags.includes('cramped')) {
+      this.style = [0, 0, 0, 2, 3, 3];
+    } else if (this.tags.includes('spacious')) {
+      this.style = [0, 0, 1, 1, 2, 3];
+    } else if (this.tags.includes('winding')) {
+      this.style = [0, 0, 1, 2, 2, 3, 3, 3, 3];
+    } else if (this.tags.includes('compact')) {
+      this.style = [0, 0, 0, 1];
+    }
+    this.symmetry = new Deck(this.order);
+    let iterCount = 0;
+    while (iterCount < 200) { // FIXME: replace this condition to `true`
+      this.rooms = [];
+      this.doors = [];
+      this.blocks = [];
+      this.queue = [];
+      let size = this.getRoomSize();
+      let axis = Random.choose([Dot_UP, Dot_DOWN, Dot_LEFT, Dot_RIGHT]);
+      this.queueRoom(null, new paper.Point(0, 0), axis, size.width, size.height);
+      while (this.queue.length > 0 && this.getSize() < this.maxSize && iterCount < 200) { // FIXME: remove condition `this.rooms.length < 100`
+        this.buildRoom();
+        iterCount++;
+      }
+      iterCount++;
+      if (this.getSize() >= this.minSize) {
+        break;
+      }
+    }
+    this.grow();
+    this.planner = new Planner(this);
+    this.planner.plan();
+    if (this.tags.includes('multi-level')) {
+      let last = this.planner.last;
+      let exit = new Door(last.xy(0, last.depth - 1), last, null);
+      this.doors.push(exit);
+    }
+    while (this.createLoop() > 0) {}
+    this.cleanUp();
+    this.flood = new Flood(this, 0);
+    this.shapeRooms();
+    this.createProps();
+    this.flood.setLevel(this.config.waterLevel / 10);
+  }
+
+  getRoomSize() {
+    let style = Random.choose(this.style);
+    let size = null;
+    switch (style) {
+      case 0:
+        size = new paper.Size(Random.int(5, 9), Random.int(4, 7));
+        break;
+      case 1:
+        size = new paper.Size(Random.int(5, 11), Random.int(7, 10));
+        break;
+      case 2:
+        size = new paper.Size(3, Random.int(4, 6));
+        break;
+      case 3:
+        size = new paper.Size(3, 3);
+        break;
+    }
+    console.log(`getRoomSize() style=${style}, size=${size}`);
+    return size;
+  }
+
+  getSize() { // TODO: rename to getNormalRoomCount
+    return this.rooms.filter(room => room.isNormal()).length;
+  }
+
+  queueRoom(parent, origin, axis, width, depth, mirror=-1) {
+    console.log(`queueRoom(parent=${parent}, origin=${origin}, axis=${axis}, width=${width}, depth=${depth}, mirror=${mirror})`);
+    this.queue.push({
+      parent: parent,
+      origin: origin,
+      width: width,
+      depth: depth,
+      axis: axis,
+      mirror: mirror
+    });
+  }
+
+  buildRoom() {
+    let info = this.queue.shift();
+    let parent = info.parent;
+    let origin = info.origin;
+    let width = info.width;
+    let depth = info.depth;
+    let axis = info.axis;
+    let mirror = info.mirror;
+    let room = this.validateRoom(origin, axis, width, depth, mirror);
+    if (room != null) {
+      this.addRoom(room);
+      room.symm = this.symmetry.pick();
+      let door = new Door(origin, parent, room);
+      this.addDoor(door);
+      if (parent == null) {
+        this.blocks.push(new paper.Rectangle(door.x, door.y, 1, 1).expand(1));
+      }
+      let side = Random.maybe(0.5) ? 1 : -1;
+      if (room.symm) {
+        if (room.isJunction() || Random.maybe(0.5)) {
+          let pos = Random.int(1, depth - 2);
+          let size = this.getRoomSize();
+          let p = room.xy(-side * (width >> 1), pos);
+          let turn = -side * mirror;
+          this.queueRoom(room, p, new paper.Point(-turn * axis.y, turn * axis.x), size.width, size.height, mirror);
+          p = room.xy(side * (width >> 1), pos);
+          turn = side * mirror;
+          this.queueRoom(room, p, new paper.Point(-turn * axis.y, turn * axis.x), size.width, size.height, -mirror);
+        }
+        let tmp = false;
+        if (!room.isJunction()) {
+          if (!room.isCorridor()) {
+            tmp = Random.maybe(0.1);
+          } else {
+            tmp = true;
+          }
+        }
+        if (tmp) {
+          let size = this.getRoomSize();
+          let p = room.xy(0, depth - 1);
+          this.queueRoom(room, p, axis, size.width, size.height, mirror);
+        }
+      } else {
+        if (Random.maybe(0.5)) {
+          let size = this.getRoomSize();
+          let p = room.xy(side * (width >> 1), Random.int(1, depth - 2));
+          this.queueRoom(room, p, new paper.Point(side * axis.y, -side * axis.x), size.width, size.height);
+        }
+        if (Random.maybe(0.5)) {
+          let size = this.getRoomSize();
+          let p = room.xy(-side * (width >> 1), Random.int(1, depth - 2));
+          this.queueRoom(room, p, new paper.Point(-side * axis.y, side * axis.x), size.width, size.height);
+        }
+        let tmp = false;
+        if (!room.isJunction()) {
+          if (!room.isCorridor()) {
+            tmp = Random.maybe(0.1);
+          } else {
+            tmp = true;
+          }
+        }
+        if (tmp) {
+          let size = this.getRoomSize();
+          let p = room.xy(Random.int(1 - (width >> 1), width >> 1), depth - 1);
+          this.queueRoom(room, p, axis, size.width, size.height);
+        }
+      }
+    }
+    return room;
+  }
+
+  validateRoom(origin, axis, width, depth, mirror=1) {
+    let room = new Room(origin, axis, width, depth, mirror);
+    for (let r of this.rooms) {
+      if (r.intersect(room).area > 1) {
+        return null;
+      }
+    }
+    for (let r of this.blocks) {
+      if (room.intersects(r)) {
+        return null;
+      }
+    }
+    return room;
+  }
+
+  addRoom(room) {
+    this.rooms.push(room);
+    room.dungeon = this;
+  }
+
+  removeRoom(room) {
+    Utils.arrayRemove(this.rooms, room);
+    room.getDoors().forEach(door => this.removeDoor(door));
+  }
+
+  addDoor(door) {
+    this.doors.push(door);
+  }
+
+  removeDoor(door) {
+    Utils.arrayRemove(this.doors, door);
+  }
+
+  /**
+   * @param {paper.Point} p
+   * @return {Door}
+   */
+  getDoor(p) {
+    let doors = this.doors.filter(door => door.equals(p));
+    return doors.length > 0 ? doors[0] : null;
+  }
+
+  /**
+   * @param {Room} room
+   * @return {boolean}
+   */
+  isUnique(room) {
+    return Random.maybe(1/3);
+  }
+
+  grow() {
+    for (let r1 of this.rooms) {
+      if ((r1.width > 3 && Random.maybe(r1.depth / r1.width)) || r1.depth >= 10) {
+        continue;
+      }
+
+      let grown = r1.getGrown();
+      let overlaps = false;
+      for (let r2 of this.rooms) {
+        if (!r2.equals(r1) && r2.intersect(grown).area > 1) {
+          overlaps = true;
+          break;
+        }
+      }
+      if (!overlaps) {
+        for (let block of this.blocks) {
+          if (block.intersects(grown)) {
+            overlaps = true;
+            break;
+          }
+        }
+      }
+      if (!overlaps) {
+        r1.set(grown);
+        r1.depth++;
+      }
+    }
+  }
+
+  createLoop() {
+    let q1 = null;
+    let q2 = null;
+    let wing1 = null;
+    let wing2 = null;
+    let intersection = null;
+    let dist = 5;
+    let graph = this.getGraph();
+    for (let i = 0; i < this.rooms.length - 1; i++) {
+      let r1 = this.rooms[i];
+      let n1 = graph.getNode(r1);
+      let w1 = this.planner.getWing(r1);
+      let s1 = Utils.includes(this.planner.secrets, w1);
+      for (let j = i + 1; j < this.rooms.length; j++) {
+        let r2 = this.rooms[j];
+        let n2 = graph.getNode(r2);
+        let w2 = this.planner.getWing(r2);
+        let s2 = Utils.includes(this.planner.secrets, w2);
+        if (!w1.equals(w2) && (s1 || s2)) {
+          continue;
+        }
+        if (n1.links.get(n2) == null) {
+          let c = r1.intersect(r2);
+          if (c.width == 1 && c.height >= 3 || c.height == 1 && c.width >= 3) {
+            let pathLen = graph.calculatePrice(graph.aStar(n1, n2));
+            if (pathLen > dist) {
+              q1 = r1;
+              wing1 = w1;
+              q2 = r2;
+              wing2 = w2;
+              intersection = c;
+              dist = pathLen;
+            }
+          }
+        }
+      }
+    }
+    if (q1 != null) {
+      let door;
+      if (intersection.height == 1) {
+        door = new Door(
+          new paper.Point(Random.int(intersection.left + 1, intersection.right - 2), intersection.top),
+          q1,
+          q2
+        );
+      } else {
+        door = new Door(
+          new paper.Point(intersection.left, Random.int(intersection.top + 1, intersection.bottom - 2)),
+          q1,
+          q2
+        );
+      }
+      let connect = wing1.equals(wing2) && (!this.planner.wings.get(wing1).equals(this.planner.approach) || this.planner.ante == null);
+      door.type = connect ? Door.autoType(q1, q2) : this.config.impassable;
+      this.doors.push(door);
+      return dist;
+    }
+    return 0;
+  }
+
+  getGraph() {
+    let graph = new Graph();
+    this.rooms.forEach(room => graph.add(room));
+
+    for (let door of this.doors) {
+      if (door.from == null || door.to == null) {
+        continue;
+      }
+      let price = 1 + (door.from.isNormal() ? 1 : 0) + (door.to.isNormal() ? 1 : 0);
+      graph.getNode(door.from).link(graph.getNode(door.to), door, price);
+    }
+    return graph;
+  }
+
+  cleanUp() {
+    let updated;
+    do {
+      updated = false;
+      for (let room of this.rooms) {
+        if (!room.isNormal() && room.getDoors().length == 1) {
+          this.removeRoom(room);
+          updated = true;
+        }
+      }
+    } while (updated);
+
+    for (let room of this.rooms) {
+      if (room.isNormal()) {
+        continue;
+      }
+
+      let xy = room.xy(0, room.depth - 1);
+      if (this.getDoor(xy) != null) {
+        continue;
+      }
+
+      let toCut = 0;
+      while (true) {
+        let xy1 = room.xy(-1, room.depth - 2 - toCut);
+        let xy2 = room.xy(1, room.depth - 2 - toCut);
+        if (this.getDoor(xy1) != null || this.getDoor(xy2) != null) {
+          break;
+        }
+        ++toCut;
+      }
+      if (toCut <= 0) {
+        continue;
+      }
+
+      if (Dot_UP.equals(room.axis)) {
+        room.top += toCut;
+        room.height -= toCut;
+      } else if (Dot_LEFT.equals(room.axis)) {
+        room.left += toCut;
+        room.width -= toCut;
+      } else if (Dot_DOWN.equals(room.axis)) {
+        room.height -= toCut;
+      } else if (Dot_RIGHT.equals(room.axis)) {
+        room.width -= toCut;
+      }
+      room.depth -= toCut;
+    }
+  }
+
+  shapeRooms() {
+    for (let room of this.rooms) {
+      if (this.config.rotundaChance > 0) {
+        let nDoors = room.getDoors().length;
+        if (room.canBeRound() && Random.maybe((nDoors / 3) * ((room.width - 2) / room.width) * this.config.rotundaChance)) {
+          room.round = true;
+        }
+      }
+      if (room.isNormal()) {
+        let kSize = 0.7 * (room.depth - 4) / room.depth + 0.3 * (room.width - 4) / room.width;
+        let kShape = room.round ? 1 : 1.2 - room.width / room.depth;
+        if (room.width == 5) {
+          kSize /= 2;
+        }
+        if (Random.maybe(kSize * kShape * this.config.colonnadeChance)) {
+          room.columns = true;
+        }
+      }
+    }
+  }
+
+  createProps() {
+    this.rooms.forEach(room => room.createProps());
+  }
+
+  updateDrawable() {
+    this.rooms = this.rooms.filter(room => !room.hidden);
+    this.doors = this.doors.filter(door => door.type == Door.STAIRS || door.type == Door.EXIT || Utils.includes(this.rooms, door.from) && Utils.includes(this.rooms, door.to));
+    this.drawable = this.rooms.concat(this.doors);
+  }
+
+  drawAll() {
+    this.recreateLayers();
+    this.drawShading();
+    let shapes = this.drawable.map(shape => Poly.scale(shape.getPoly(), 30));
+    let seams = this.drawable.flatMap(shape => shape.getSeams().map(seam => Poly.scale(seam, 30)));
+    this.drawShape(shapes, seams);
+    this.drawWater(shapes);
+    this.drawShadows(shapes);
+    this.drawGrid();
+    this.rooms.forEach((room) => {
+      if (this.config.showCorners) {
+        room.drawCorners(this.corners);
+      }
+      this.props.addChildren(room.props);
+    });
+    this.doors.forEach(door => door.draw(this.details));
+    this.rooms.forEach(room => room.drawColonnades(this.details));
+  }
+
+  recreateLayers() {
+    paper.project.clear();
+    this.shading = paper.project.addLayer(new Layer({}));
+    this.shape = paper.project.addLayer(new Layer({}));
+    this.grid = paper.project.addLayer(new Layer({}));
+    this.water = paper.project.addLayer(new Layer({}));
+    this.corners = paper.project.addLayer(new Layer({}));
+    this.props = paper.project.addLayer(new Layer({}));
+    this.shadow = paper.project.addLayer(new Layer({}));
+    this.details = paper.project.addLayer(new Layer({}));
+
+    this.water.visible = this.config.showWater;
+    this.corners.visible = this.config.showCorners;
+    this.props.visible = this.config.showProps;
+    this.shadow.visible = this.config.showShadow && !this.config.blackAndWhite;
+  }
+
+  drawShading() {
+    this.drawable.forEach(shape => this.shading.addChild(shape.getHatchingArea()));
+  }
+
+  drawShape(shapes, seams) {
+    let thickness = this.config.hatchingStyle == 'Stonework' || this.config.hatchingStyle == 'Bricks' ? this.config.strokeNormal : this.config.strokeThick;
+    let white = this.config.blackAndWhite ? this.config.colorPaper : this.config.colorBg;
+    shapes.forEach(poly =>
+      this.shape.addChild(new paper.Path({
+        segments: poly,
+        closed: true,
+        strokeColor: this.config.colorInk,
+        strokeWidth: thickness * 2,
+        fillColor: white
+      }))
+    );
+    seams.forEach(seam =>
+      this.shape.addChild(new paper.Path({
+        segments: seam,
+        strokeColor: white,
+        strokeWidth: 1
+      }))
+    );
+  }
+
+  drawWater(shapes) {
+    if (shapes != null) {
+      let mask = new paper.Path({
+        segments: shapes[0],
+        closed: true,
+        fillColor: 'red'
+      });
+      shapes.forEach(poly => {
+        let p = new paper.Path({
+          segments: poly,
+          closed: true,
+          fillColor: 'red'
+        });
+        mask.unite(p);
+        p.remove();
+      });
+      this.water.addChild(mask);
+      this.water.clipped = true;
+    }
+    this.water.visible = this.config.showWater;
+    this.updateWater();
+  }
+
+  updateWater() {
+    let fillColor = this.config.blackAndWhite ? this.config.colorPaper : this.config.colorWater;
+    let strokeWidth = this.config.strokeNormal;
+    let strokeColor = this.config.colorInk;
+
+    this.dungeon.flood.edges.forEach(poly => {
+      let smoothed = Poly.chaikinRender(poly, true, 3);
+      this.water.addChild(new paper.Path({
+        segments: Poly.scale(smoothed, 30),
+        closed: true,
+        fillColor: fillColor,
+        strokeColor: strokeColor,
+        strokeWidth: strokeWidth,
+      }));
+    });
+
+    let pattern = new Array(9);
+    for (let i = 0; i < pattern.length; i++) {
+      pattern[i] = this.config.strokeNormal + 30 * Math.abs(Random.times(4) * 2 - 1);
+    }
+    this.dungeon.flood.ripples1.forEach(poly => {
+      let smoothed = Poly.chaikinRender(poly, true, 3);
+      this.water.addChild(new paper.Path({
+        segments: Poly.scale(smoothed, 30),
+        strokeColor: strokeColor,
+        strokeWidth: strokeWidth,
+        dashArray: pattern
+      }));
+    });
+
+    pattern = new Array(10);
+    for (let i = 0; i < pattern.length; i+=2) {
+      pattern[i] = this.config.strokeNormal + 30 * Math.abs(Random.times(4) * 2 - 1);
+      pattern[i + 1] = this.config.strokeNormal + 30 * Math.abs(Random.times(4) * 2 - 1) * 5;
+    }
+    this.dungeon.flood.ripples2.forEach(poly => {
+      let smoothed = Poly.chaikinRender(poly, true, 3);
+      this.water.addChild(new paper.Path({
+        segments: Poly.scale(smoothed, 30),
+        strokeColor: strokeColor,
+        strokeWidth: strokeWidth,
+        dashArray: pattern
+      }));
+    });
+  }
+
+  drawShadows(shapes) {
+    if (this.config.shadowColor === '#FFFFFFFF') {
+      return;
+    }
+
+    let mask = new paper.Path({
+      segments: shapes[0],
+      closed: true,
+      fillColor: 'red'
+    });
+    shapes.forEach(poly => {
+      let p = new paper.Path({
+        segments: poly,
+        closed: true,
+        fillColor: 'red'
+      });
+      mask.unite(p);
+      p.remove();
+    });
+    this.shadow.addChild(mask);
+    this.shadow.clipped = true;
+
+    let strokeWidth = 66 * this.config.shadowDist;
+    this.shadow.blendMode = 'multiply';
+    shapes.forEach(poly => {
+      this.shadow.addChildren([
+        new paper.Path({
+          segments: poly,
+          closed: true,
+          strokeColor: this.config.shadowColor,
+          strokeWidth: strokeWidth,
+        }),
+        new paper.Path({
+          segments: poly,
+          closed: true,
+          fillColor: 'white',
+        })
+      ]);
+    });
+
+    this.adjustShadowsAngle();
+  }
+
+  adjustShadowsAngle() {
+    let a = new paper.Point({length: 30 * this.config.shadowDist, angle: 45 - this.config.rotation});
+    this.shadow.position = a;
+    if (this.shadow.clipped) {
+      this.shadow.firstChild.position = a.rotate(180);
+    }
+  }
+
+  drawGrid() {
+    this.grid.removeChildren();
+    this.rooms.forEach(room => room.drawGrid(this.grid));
+    this.doors.forEach(door => door.drawGrid(this.grid, this.config));
   }
 
   /**
@@ -266,7 +4634,20 @@ class MapGenerator {
    * @param {number} mode one of `GridType_*`
    */
   setGridMode(mode) {
-    console.log(`MapGenerator.setGridMode(${mode})`);
+    this.config.gridMode = mode;
+    updateGridPattern();
+    this.drawGrid();
+  }
+
+  updateGridPattern() {
+    if (this.config.gridMode == GridType_DASHED) {
+      let g = 0.1 + 0.2 * Random.times(3);
+      this.config.gridPattern = [0, g * 30, (1 - g * 2) * 30, g * 30];
+    } else if (this.config.gridMode == GridType_SOLID) {
+      this.config.gridPattern = [30 * Random.float(4), 15 * Math.abs(Random.times(4) * 2 - 1), 30 * Random.float(4, 8), 15 * Math.abs(Random.times(4) * 2 - 1)];
+    } else {
+      this.config.gridPattern = [config.strokeNormal * 0.5, config.strokeNormal * (3 + Random.times(3))];
+    }
   }
 
   /**
@@ -338,8 +4719,8 @@ class MapGenerator {
    * @param {number} level the flood level.
    */
   setFloodLevel(level) {
-    console.log(`MapGenerator.setFloodLevel(${level})`);
     this.config.floodLevel = level;
+    this.flood.setLevel(level);
     this.updateWater();
   }
 
@@ -377,8 +4758,12 @@ class MapGenerator {
     console.log(`MapGenerator.exportVOX()`);
   }
 
-  newDungeon() {
-    console.log(`MapGenerator.newDungeon()`);
+  /**
+   * @param {string[]} tags
+   */
+  newDungeon(tags=[]) {
+    this.reset(tags);
+    // this.layout(); // TODO
   }
 
   rerollNotes() {
@@ -395,9 +4780,5 @@ class MapGenerator {
       return;
     }
     console.log(`MapGenerator.rearrangeNotes() rerolling`);
-  }
-
-  updateWater() {
-    console.log(`MapGenerator.updateWater()`);
   }
 }
