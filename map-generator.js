@@ -849,7 +849,7 @@ class Utils {
    * @return {string}
    */
   static num2text(n) {
-    return n > NUM_TEXTS.length - 1 ? NUM_TEXTS[NUM_TEXTS.length - 1] : NUM_TEXTS[n];
+    return n > Utils.NUM_TEXTS.length - 1 ? Utils.NUM_TEXTS[Utils.NUM_TEXTS.length - 1] : Utils.NUM_TEXTS[n];
   }
 
   /**
@@ -882,7 +882,7 @@ class Utils {
    * @return {boolean} whether the array contains the item.
    */
   static includes(ary, val) {
-    let valHasEquals = typeof val === 'object' && val.hasOwnProperty('equals');
+    let valHasEquals = typeof val === 'object' && val !== null && val.hasOwnProperty('equals');
     return ary.some(item => (valHasEquals && val.equals(item)) || (!valHasEquals && item === val) || false);
   }
 
@@ -908,7 +908,7 @@ class Utils {
    * @return the modified array.
    */
   static arrayRemove(ary, val) {
-    let valHasEquals = typeof val === 'object' && val.hasOwnProperty('equals');
+    let valHasEquals = typeof val === 'object' && val !== null && val.hasOwnProperty('equals');
     for(let i = 0; i < ary.length; i++) {
       if ((valHasEquals && val.equals(ary[i])) || (!valHasEquals && ary[i] === val) || false) {
         ary.splice(i, 1);
@@ -946,7 +946,7 @@ class Utils {
     if (arg1 !== undefined && arg1 !== null) {
       p = new paper.Point(arg0, arg1);
     } else {
-      p = arg1;
+      p = arg0;
     }
     if (p.equals(Dot_UP)) {
       return 90;
@@ -966,7 +966,7 @@ class Utils {
    * @param {number} w
    * @return {number}
    */
-  interpolate(a, b, w) {
+  static interpolate(a, b, w) {
     return a + (b - a) * w;
   }
 }
@@ -1148,7 +1148,7 @@ class PerlinNoise {
       let x = ofsx;
       grid[h] = new Array(width);
       for (let w = 0; w < width; w++) {
-        grid[h][w] = PerlinNoise.noise(x, y);
+        grid[h][w] = this.noise(x, y);
         x += xStep;
       }
       y += yStep;
@@ -1731,8 +1731,8 @@ class Poly {
     // 1. compare (sin, cos) with Dot_* to get n * 90;
     // 2. otherwise return new paper.Point(sin, cos).angle
     for (let i = 0; i < poly.length; i++) {
-      poly[i].x = v.x * cos - v.y * sin;
-      poly[i].y = v.x * sin + v.y * cos;
+      poly[i].x = poly[i].x * cos - poly[i].y * sin;
+      poly[i].y = poly[i].x * sin + poly[i].y * cos;
     }
   }
 
@@ -1782,9 +1782,9 @@ class Poly {
       let result = [];
       let n = points.length;
       let p;
-      for (let j = 1; j < points.length - 1; i++) {
+      for (let j = 1; j < n - 1; j++) {
         p = points[j];
-        if (!Utils.includes(exclude, p)) {
+        if (Utils.includes(exclude, p)) {
           result.push(p);
         } else {
           result.push(Poly.lerp(p, points[j - 1], 0.25));
@@ -1792,18 +1792,18 @@ class Poly {
         }
       }
       if (closed) {
-        p = points[points.length - 1];
-        if (!Utils.includes(exclude, p)) {
+        p = points[n - 1];
+        if (Utils.includes(exclude, p)) {
           result.push(p);
         } else {
-          result.push(Poly.lerp(p, points[points.length - 2], 0.25));
+          result.push(Poly.lerp(p, points[n - 2], 0.25));
           result.push(Poly.lerp(p, points[0], 0.25));
         }
         p = points[0];
-        if (!Utils.includes(exclude, p)) {
+        if (Utils.includes(exclude, p)) {
           result.push(p);
         } else {
-          result.push(Poly.lerp(p, points[points.length - 1], 0.25));
+          result.push(Poly.lerp(p, points[n - 1], 0.25));
           result.push(Poly.lerp(p, points[1], 0.25));
         }
       } else {
@@ -1834,6 +1834,10 @@ class Poly {
    * @return {paper.Point[]}
    */
   static resample(poly, step) {
+    if (poly.length < 3) {
+      return poly;
+    }
+
     let len = 0;
     let res = [poly[0]];
     let ofs = step;
@@ -1868,7 +1872,7 @@ class Poly {
    * @param {paper.Point[]} poly
    * @return {number}
    */
-  pathLength(poly) {
+  static pathLength(poly) {
     let l = 0;
     for (let i = 1; i < poly.length; i++) {
       l += poly[i - 1].getDistance(poly[i]);
@@ -1885,7 +1889,6 @@ class Drawing extends paper.Group {  // <= com_watabou_dungeon_visuals_drawings_
    */
   constructor(children=[], config=PresetMapStyle_DEFAULT) {
     super(children);
-    this.visible = false;
     this.setStyle(config);
   }
 
@@ -1903,12 +1906,11 @@ class Drawing extends paper.Group {  // <= com_watabou_dungeon_visuals_drawings_
    * @return {Drawing}
    */
   place(pos, angle=0, scale=1) {  // <= com_watabou_dungeon_visuals_drawings_Instance
-    let inst = this.clone();
-    inst.visible = true;
-    inst.rotate(angle);
-    inst.scale(scale * 30);
-    inst.position = pos.multiply(30).add(inst.bounds.size.divide(2));
-    return inst;
+    this.visible = true;
+    this.rotate(angle);
+    this.scale(scale * 30);
+    this.position = pos.multiply(30).add(this.bounds.size.divide(2));
+    return this;
   }
 }
 
@@ -1921,7 +1923,6 @@ class Shape extends paper.Path {
    */
   constructor(points, closed=true, config=PresetMapStyle_DEFAULT) {
     super(points);
-    this.visible = false;
     this.closed = closed;
     this.setStyle(config);
   }
@@ -2005,15 +2006,6 @@ class Boulder extends Shape {
     ];
     super(Poly.chaikinRender(poly, true, 2));
   }
-
-  static insts = [new Boulder(), new Boulder(), new Boulder()];
-
-  /**
-   * @return {Boulder}
-   */
-  static random() {
-    return Random.choose(Boulder.insts).clone();
-  }
 }
 
 
@@ -2040,21 +2032,6 @@ class Tapestry extends Shape {
     poly.pop();
     super(poly, false);
   }
-
-  static cache = new Map();
-
-  /**
-   * @param {number} len
-   * @return {Tapestry}
-   */
-  static get(len) {
-    if (Tapestry.cache.has(len)) {
-      return Tapestry.cache.get(len);
-    }
-    let inst = new Tapestry(len);
-    Tapestry.cache.set(len, inst);
-    return inst;
-  }
 }
 
 
@@ -2074,8 +2051,6 @@ class Statue extends Drawing {
     let shape2 = new NoStokeInkShape(poly);
     super([shape1, shape2]);
   }
-
-  static inst = new Statue();
 }
 
 
@@ -2093,8 +2068,6 @@ class Sarcophagus extends Drawing {
     let shape2 = new NoFillShape(Poly.scale(poly, 0.7));
     super([shape1, shape2]);
   }
-
-  static inst = new Sarcophagus();
 }
 
 
@@ -2108,8 +2081,6 @@ class Altar extends Drawing {
     let shape3 = new Shape(Poly.translate(poly, 0.2, 0.2));
     super([shape1, shape2, shape3]);
   }
-
-  static inst = new Altar();
 }
 
 
@@ -2119,8 +2090,6 @@ class Throne extends Drawing {
     let shape2 = new Shape(Poly.translate(Poly.rect(0.3, 0.3), -0.1, 0));
     super([shape1, shape2]);
   }
-
-  static inst = new Throne();
 }
 
 
@@ -2131,8 +2100,6 @@ class Well extends Drawing {
     let shape2 = new WaterShape(Poly.regular(16, r * 0.6));
     super([shape1, shape2]);
   }
-
-  static inst = new Well();
 }
 
 
@@ -2146,8 +2113,6 @@ class Chest extends Drawing {
       new Shape([new paper.Point(-0.3, 0.25), new paper.Point(0.3, 0.25)], false)
     ]);
   }
-
-  static inst = new Chest();
 }
 
 
@@ -2159,8 +2124,6 @@ class Box extends Drawing {
       new Shape([new paper.Point(0.1, -0.3), new paper.Point(0.1, 0.3)], false)
     ]);
   }
-
-  static inst = new Box();
 }
 
 
@@ -2175,8 +2138,6 @@ class Barrel extends Drawing {
       new Shape([new paper.Point(-rs, r2), new paper.Point(rs, r2)], false)
     ]);
   }
-
-  static inst = new Barrel();
 }
 
 
@@ -2189,8 +2150,6 @@ class Fountain extends Drawing {
       new Shape(Poly.regular(12, r * 0.2))
     ]);
   }
-
-  static inst = new Fountain();
 }
 
 
@@ -2216,8 +2175,6 @@ class Dais extends Drawing {
 
     super([shape1, shape2, shape3]);
   }
-
-  static inst = new Dais();
 }
 
 
@@ -2225,8 +2182,6 @@ class SmallDais extends Drawing {
   constructor() {
     super([new Shape(Poly.regular(32, 1.25)), new NoFillShape(Poly.regular(32, 1))]);
   }
-
-  static inst = new SmallDais();
 }
 
 
@@ -2550,7 +2505,7 @@ class Room extends paper.Rectangle {
       let f = Random.float();
       let size = 0.1 + (crumbling ? 0.6 : 0.4) * (f * f * f);
       let p = this.scatter(size);
-      this.props.push(Boulder.random().place(p, Random.float(180), size));
+      this.props.push(new Boulder().place(p, Random.float(180), size));
     }
     let aisleAvailable = this.aisleAvailable();
     let object =
@@ -2571,7 +2526,7 @@ class Room extends paper.Rectangle {
         this.addFountain();
       } else if (this.desc == null && Random.maybe(this.dungeon.config.wellChance * (this.round ? 2 : 1))) {
         this.dungeon.config.wellChance = 0;
-        this.props.push(Well.inst.place(this.center));
+        this.props.push(new Well().place(this.center));
       } else {
         if (Random.maybe(1/3)) {
           let n = Random.float(area / 5);
@@ -2600,25 +2555,25 @@ class Room extends paper.Rectangle {
       }
       if (this.dungeon.tags.includes('multi-level')) {
         if (Random.maybe(0.5)) {
-          this.props.push(Statue.inst.place(this.center()));
+          this.props.push(new Statue().place(this.center));
         } else if (!this.round) {
-          this.props.push(Dais.inst.place(this.aisle(), Utils.axis2angle(this.axis)));
+          this.props.push(new Dais().place(this.aisle(), Utils.axis2angle(this.axis)));
         }
       } else {
         let pos = this.round ? this.center() : this.aisle();
-        let drawing = this.round ? SmallDais.inst : Dais.inst;
+        let drawing = this.round ? new SmallDais() : new Dais();
         let rotation = Utils.axis2angle(this.axis);
         this.props.push(drawing.place(pos, rotation));
 
         if (this.dungeon.tags.includes('temple')) {
-          drawing = Altar.inst;
+          drawing = new Altar();
         } else if (this.dungeon.tags.includes('tomb')) {
-          drawing = Sarcophagus.inst;
+          drawing = new Sarcophagus();
           rotation = Utils.axis2angle(this.axis.abs());
         } else if (this.dungeon.tags.includes('dwelling')) {
-          drawing = Throne.inst;
+          drawing = new Throne();
         } else {
-          drawing = Statue.inst;
+          drawing = new Statue();
           rotation = 0;
         }
         this.props.push(drawing.place(pos, rotation));
@@ -2627,44 +2582,44 @@ class Room extends paper.Rectangle {
   }
 
   addTapestry() {
-    let inst = Tapestry.get(this.width - 2);
+    let inst = new Tapestry(this.width - 2);
     inst.place(this.aisle(), Utils.axis2angle(-this.axis.y, this.axis.x));
     this.props.push(inst);
     return inst;
   }
 
   addStatue() {
-    let inst = Statue.inst.place(this.aisle());
+    let inst = new Statue().place(this.aisle());
     this.props.push(inst);
     return inst;
   }
 
   addSarcophagus() {
-    let inst = Sarcophagus.inst.place(this.aisle(), Utils.axis2angle(this.axis.abs()));
+    let inst = new Sarcophagus().place(this.aisle(), Utils.axis2angle(this.axis.abs()));
     this.props.push(inst);
     return inst;
   }
 
   addAltar() {
-    let inst = Altar.inst.place(this.aisle(), Utils.axis2angle(this.axis));
+    let inst = new Altar().place(this.aisle(), Utils.axis2angle(this.axis));
     this.props.push(inst);
     return inst;
   }
 
   addThrone() {
-    let inst = Throne.inst.place(this.aisle(), Utils.axis2angle(this.axis));
+    let inst = new Throne().place(this.aisle(), Utils.axis2angle(this.axis));
     this.props.push(inst);
     return inst;
   }
 
   addWell() {
-    let inst = Well.inst.place(this.aisle());
+    let inst = new Well().place(this.aisle());
     this.props.push(inst);
     return inst;
   }
 
   addChest() {
-    let inst = new Chest.inst.place(this.aisle(), Utils.axis2angle(this.axis));
+    let inst = new Chest().place(this.aisle(), Utils.axis2angle(this.axis));
     this.props.push(inst);
     return inst;
   }
@@ -2672,14 +2627,14 @@ class Room extends paper.Rectangle {
   addCrate() {
     let size = 0.4 + 0.6 * Random.times(3);
     let p = this.scatter(size);
-    let inst = Box.inst.place(p, Random.float(180), size);
+    let inst = new Box().place(p, Random.float(180), size);
     this.props.push(inst);
     return inst;
   }
 
   addBarrel(size) {
     let p = this.scatter(size);
-    let inst = Barrel.inst.place(p, Random.float(180), size);
+    let inst = new Barrel().place(p, Random.float(180), size);
     this.props.push(inst);
     return inst;
   }
@@ -2690,7 +2645,7 @@ class Room extends paper.Rectangle {
 
   addFountain() {
     let size = Math.sqrt((Math.min(this.width, this.height) - 2) / 3) * 1.5;
-    let inst = Fountain.inst.place(this.center(), 0, size);
+    let inst = new Fountain().place(this.center(), 0, size);
     this.props.push(inst);
     return inst;
   }
@@ -2721,16 +2676,16 @@ class Room extends paper.Rectangle {
 
   getGrown() {
     if (Dot_UP.equals(this.axis)) {
-      return new paper.RectRectangle(this.left, this.top - 1, this.width, this.height + 1);
+      return new paper.Rectangle(this.left, this.top - 1, this.width, this.height + 1);
     }
     if (Dot_DOWN.equals(this.axis)) {
-      return new paper.RectRectangle(this.left, this.top, this.width, this.height + 1);
+      return new paper.Rectangle(this.left, this.top, this.width, this.height + 1);
     }
     if (Dot_LEFT.equals(this.axis)) {
-      return new paper.RectRectangle(this.left - 1, this.top, this.width + 1, this.height);
+      return new paper.Rectangle(this.left - 1, this.top, this.width + 1, this.height);
     }
     if (Dot_RIGHT.equals(this.axis)) {
-      return new paper.RectRectangle(this.left, this.top, this.width + 1, this.height);
+      return new paper.Rectangle(this.left, this.top, this.width + 1, this.height);
     }
     return null;
   }
@@ -2901,7 +2856,7 @@ class Room extends paper.Rectangle {
     n = v1.rotate(90).multiply(end / 2);
     a.push(p2.add(n));
     b.unshift(p2.subtract(n));
-    layer.addChild(new Path({
+    layer.addChild(new paper.Path({
       segments: a.concat(b),
       fillColor: this.dungeon.config.colorInk,
       closed: true
@@ -3068,7 +3023,13 @@ class Door extends paper.Point {
     if (from != null) {
       this.dir = from.out(this);
     } else if (to != null) {
-      this.dir = to.out(this).rotate(180);
+      let o = to.out(this);
+      if (o != null) {
+        this.dir = o.rotate(180);
+      }
+    }
+    if (this.dir == null) {
+      console.error(`Failed to set Door.dir when pos=${pos}, from=${from}, to=${to}`);
     }
   }
 
@@ -3348,7 +3309,7 @@ class Flood {
     let x, y;
     let rect = this.dungeon.getRect();
     for (let r of this.dungeon.rooms) {
-      let r1 = new paper.Rect(r.point.subtract(rect.point), r.size);
+      let r1 = new paper.Rectangle(r.point.subtract(rect.point), r.size);
       for (y = r1.top + 1; y < r1.bottom - 1; y++) {
         for (x = r1.left + 1; x < r1.right - 1; x++) {
           this.bitmap[y][x] = this.map[y][x] < threshold;
@@ -3583,13 +3544,11 @@ class Graph {
       Utils.arrayRemove(openSet, current);
       closedSet.push(current);
       let curScore = gScore.get(current);
-      let neighbours = current.links.keys();
-      while (neighbours.hasNext()) {
-        let neighbour = neighbours.next();
+      for (let [neighbour, edge] of current.links) {
         if (Utils.includes(closedSet, neighbour)) {
           continue;
         }
-        let score = curScore + current.links.get(neighbour).price;
+        let score = curScore + edge.price;
         if (!Utils.includes(openSet, neighbour)) {
           openSet.push(neighbour);
         } else if (score >= gScore.get(neighbour)) {
@@ -3716,7 +3675,7 @@ class Planner {
         room.loot = true;
       }
     }
-    available = Random.choose(this.getAvailable());
+    available = Utils.subset(this.getAvailable(), 1);
     for (let room of available) {
       if (!room.loot && !room.key && !room.enemy) {
         room.event = true;
@@ -3775,7 +3734,11 @@ class Planner {
     }
     gate.type = Door.SPECIAL;
     this.gateRoom = gate.from;
-    this.gateRoom.gate = true;
+    if (this.gateRoom == null) {
+      console.error(`buildApproach() no from in gate ${gate}`);
+    } else {
+      this.gateRoom.gate = true;
+    }
   }
 
   buildSecrets() {
@@ -4029,10 +3992,12 @@ class MapGenerator {
       }
       this.updateDrawable();
     }
-    this.title.set_text(this.story.name); // TODO
-    this.story.set_text(this.story.hook); // TODO
+    // this.title.set_text(this.story.name); // TODO
+    // this.story.set_text(this.story.hook); // TODO
+    console.log('MapGenerator.reset() start drawing all...');
     this.drawAll();
     // this.recreateNotes(); // TODO
+    console.log('MapGenerator.reset() DONE');
   }
 
   build() {
@@ -4449,20 +4414,20 @@ class MapGenerator {
       }
       this.props.addChildren(room.props);
     });
-    this.doors.forEach(door => door.draw(this.details));
+    this.doors.forEach(door => door.draw(this.details, this.config));
     this.rooms.forEach(room => room.drawColonnades(this.details));
   }
 
   recreateLayers() {
     paper.project.clear();
-    this.shading = paper.project.addLayer(new Layer({}));
-    this.shape = paper.project.addLayer(new Layer({}));
-    this.grid = paper.project.addLayer(new Layer({}));
-    this.water = paper.project.addLayer(new Layer({}));
-    this.corners = paper.project.addLayer(new Layer({}));
-    this.props = paper.project.addLayer(new Layer({}));
-    this.shadow = paper.project.addLayer(new Layer({}));
-    this.details = paper.project.addLayer(new Layer({}));
+    this.shading = paper.project.addLayer(new paper.Layer({name:'shading'}));
+    this.shape = paper.project.addLayer(new paper.Layer({name:'shape'}));
+    this.grid = paper.project.addLayer(new paper.Layer({name:'grid'}));
+    this.water = paper.project.addLayer(new paper.Layer({name:'water'}));
+    this.corners = paper.project.addLayer(new paper.Layer({name:'corners'}));
+    this.props = paper.project.addLayer(new paper.Layer({name:'props'}));
+    this.shadow = paper.project.addLayer(new paper.Layer({name:'shadow'}));
+    this.details = paper.project.addLayer(new paper.Layer({name:'details'}));
 
     this.water.visible = this.config.showWater;
     this.corners.visible = this.config.showCorners;
@@ -4523,7 +4488,7 @@ class MapGenerator {
     let strokeWidth = this.config.strokeNormal;
     let strokeColor = this.config.colorInk;
 
-    this.dungeon.flood.edges.forEach(poly => {
+    this.flood.edges.forEach(poly => {
       let smoothed = Poly.chaikinRender(poly, true, 3);
       this.water.addChild(new paper.Path({
         segments: Poly.scale(smoothed, 30),
@@ -4538,7 +4503,7 @@ class MapGenerator {
     for (let i = 0; i < pattern.length; i++) {
       pattern[i] = this.config.strokeNormal + 30 * Math.abs(Random.times(4) * 2 - 1);
     }
-    this.dungeon.flood.ripples1.forEach(poly => {
+    this.flood.ripples1.forEach(poly => {
       let smoothed = Poly.chaikinRender(poly, true, 3);
       this.water.addChild(new paper.Path({
         segments: Poly.scale(smoothed, 30),
@@ -4553,7 +4518,7 @@ class MapGenerator {
       pattern[i] = this.config.strokeNormal + 30 * Math.abs(Random.times(4) * 2 - 1);
       pattern[i + 1] = this.config.strokeNormal + 30 * Math.abs(Random.times(4) * 2 - 1) * 5;
     }
-    this.dungeon.flood.ripples2.forEach(poly => {
+    this.flood.ripples2.forEach(poly => {
       let smoothed = Poly.chaikinRender(poly, true, 3);
       this.water.addChild(new paper.Path({
         segments: Poly.scale(smoothed, 30),
@@ -4640,13 +4605,14 @@ class MapGenerator {
   }
 
   updateGridPattern() {
-    if (this.config.gridMode == GridType_DASHED) {
+    let config = this.config;
+    if (config.gridMode == GridType_DASHED) {
       let g = 0.1 + 0.2 * Random.times(3);
-      this.config.gridPattern = [0, g * 30, (1 - g * 2) * 30, g * 30];
-    } else if (this.config.gridMode == GridType_SOLID) {
-      this.config.gridPattern = [30 * Random.float(4), 15 * Math.abs(Random.times(4) * 2 - 1), 30 * Random.float(4, 8), 15 * Math.abs(Random.times(4) * 2 - 1)];
+      config.gridPattern = [0, g * 30, (1 - g * 2) * 30, g * 30];
+    } else if (config.gridMode == GridType_SOLID) {
+      config.gridPattern = [30 * Random.float(4), 15 * Math.abs(Random.times(4) * 2 - 1), 30 * Random.float(4, 8), 15 * Math.abs(Random.times(4) * 2 - 1)];
     } else {
-      this.config.gridPattern = [config.strokeNormal * 0.5, config.strokeNormal * (3 + Random.times(3))];
+      config.gridPattern = [config.strokeNormal * 0.5, config.strokeNormal * (3 + Random.times(3))];
     }
   }
 
