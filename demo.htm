@@ -702,7 +702,7 @@ $(document).ready(function() {
    'style-color-paper',
    'style-shadow-color'].forEach((id) => $(`#${id}`).prop('readonly', true).minicolors(opts));
 
-  gMapGenerator = new MapGenerator();
+  gMapGenerator = new MapGenerator('canvas');
 });
 </script>
 </body>

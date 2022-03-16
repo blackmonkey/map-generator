@@ -1885,18 +1885,20 @@ class Poly {
 class Drawing extends paper.Group {  // <= com_watabou_dungeon_visuals_drawings_Drawing
   /**
    * @param {paper.Item[]} children the points of this shape.
-   * @param {Map} config the current theme.
+   * @param {Map} config the current config.
    */
-  constructor(children=[], config=PresetMapStyle_DEFAULT) {
+  constructor(children=[], config=null) {
     super(children);
     this.setStyle(config);
   }
 
   /**
-   * @param {Map} config the current theme.
+   * @param {Map} config the current config.
    */
   setStyle(config) {
-    this.children.forEach(p => p.setStyle(config));
+    if (config != null) {
+      this.children.forEach(p => p.setStyle(config));
+    }
   }
 
   /**
@@ -1919,20 +1921,22 @@ class Shape extends paper.Path {
   /**
    * @param {paper.Point[]} points the points of this shape.
    * @param {boolean} closed whether the path is closed.
-   * @param {Map} config the current theme.
+   * @param {Map} config the current config.
    */
-  constructor(points, closed=true, config=PresetMapStyle_DEFAULT) {
+  constructor(points, closed=true, config=null) {
     super(points);
     this.closed = closed;
     this.setStyle(config);
   }
 
   /**
-   * @param {Map} config the current theme.
+   * @param {Map} config the current config.
    */
   setStyle(config) {
-    this.strokeColor = config.colorInk;
-    this.fillColor = config.blackAndWhite ? config.colorPaper : config.colorBg;
+    if (config != null) {
+      this.strokeColor = config.style.colorInk;
+      this.fillColor = config.blackAndWhite ? config.style.colorPaper : config.style.colorBg;
+    }
   }
 
   /**
@@ -1941,7 +1945,7 @@ class Shape extends paper.Path {
    * @param {number} scale
    * @return {Shape}
    */
-  place(pos, angle=0, scale=1) {  // <= com_watabou_dungeon_visuals_drawings_Instance
+  place(pos, angle=0, scale=1) {
     let inst = this.clone();
     inst.visible = true;
     inst.rotate(angle);
@@ -1954,7 +1958,7 @@ class Shape extends paper.Path {
 
 class NoStokeShape extends Shape {
   /**
-   * @param {Map} config the current theme.
+   * @param {Map} config the current config.
    */
   setStyle(config) {
     super.setStyle(config);
@@ -1965,18 +1969,20 @@ class NoStokeShape extends Shape {
 
 class NoStokeInkShape extends NoStokeShape {
   /**
-   * @param {Map} config the current theme.
+   * @param {Map} config the current config.
    */
   setStyle(config) {
     super.setStyle(config);
-    this.fillColor = config.colorInk;
+    if (config != null) {
+      this.fillColor = config.style.colorInk;
+    }
   }
 }
 
 
 class NoFillShape extends Shape {
   /**
-   * @param {Map} config the current theme.
+   * @param {Map} config the current config.
    */
   setStyle(config) {
     super.setStyle(config);
@@ -1987,24 +1993,30 @@ class NoFillShape extends Shape {
 
 class WaterShape extends Shape {
   /**
-   * @param {Map} config the current theme.
+   * @param {Map} config the current config.
    */
   setStyle(config) {
     super.setStyle(config);
-    this.fillColor = config.colorWater;
+    if (config != null) {
+      this.fillColor = config.style.colorWater;
+    }
   }
 }
 
 
 class Boulder extends Shape {
-  constructor() {
+  /**
+   * @param {Map} config the current config.
+   * @return {Boulder}
+   */
+  constructor(config) {
     let poly = [
       new paper.Point({length: 0.5, angle: Random.float(90)}),
       new paper.Point({length: 0.5, angle: Random.float(90, 180)}),
       new paper.Point({length: 0.5, angle: Random.float(180, 270)}),
       new paper.Point({length: 0.5, angle: Random.float(270, 360)})
     ];
-    super(Poly.chaikinRender(poly, true, 2));
+    super(Poly.chaikinRender(poly, true, 2), true, config);
   }
 }
 
@@ -2012,9 +2024,10 @@ class Boulder extends Shape {
 class Tapestry extends Shape {
   /**
    * @param {number} len
+   * @param {Map} config the current config.
    * @return {Tapestry}
    */
-  constructor(len) {
+  constructor(len, config) {
     let poly = [], len2 = len / 2;
     for (let i = 0; i < len; i++) {
       poly.push(new paper.Point(i + 0.00 - len2, -0.4));
@@ -2030,13 +2043,17 @@ class Tapestry extends Shape {
     poly = Poly.chaikinRender(poly, false, 2);
     poly.shift();
     poly.pop();
-    super(poly, false);
+    super(poly, false, config);
   }
 }
 
 
 class Statue extends Drawing {
-  constructor() {
+  /**
+   * @param {Map} config the current config.
+   * @return {Statue}
+   */
+  constructor(config) {
     let shape1 = new Shape(Poly.regular(16, 1/3));
 
     let poly = [];
@@ -2049,13 +2066,17 @@ class Statue extends Drawing {
       );
     }
     let shape2 = new NoStokeInkShape(poly);
-    super([shape1, shape2]);
+    super([shape1, shape2], config);
   }
 }
 
 
 class Sarcophagus extends Drawing {
-  constructor() {
+  /**
+   * @param {Map} config the current config.
+   * @return {Sarcophagus}
+   */
+  constructor(config) {
     let poly = [
       new paper.Point(-0.25, -0.2),
       new paper.Point(-0.15, -0.45),
@@ -2066,69 +2087,93 @@ class Sarcophagus extends Drawing {
     ];
     let shape1 = new Shape(poly);
     let shape2 = new NoFillShape(Poly.scale(poly, 0.7));
-    super([shape1, shape2]);
+    super([shape1, shape2], config);
   }
 }
 
 
 class Altar extends Drawing {
-  constructor() {
+  /**
+   * @param {Map} config the current config.
+   * @return {Altar}
+   */
+  constructor(config) {
     let poly = Poly.rect(0.4, 0.8);
     let shape1 = new Shape(Poly.translate(poly, 0.2, 0));
 
     poly = Poly.regular(6, 0.01);
     let shape2 = new Shape(Poly.translate(poly, 0.2, -0.2));
     let shape3 = new Shape(Poly.translate(poly, 0.2, 0.2));
-    super([shape1, shape2, shape3]);
+    super([shape1, shape2, shape3], config);
   }
 }
 
 
 class Throne extends Drawing {
-  constructor() {
+  /**
+   * @param {Map} config the current config.
+   * @return {Throne}
+   */
+  constructor(config) {
     let shape1 = new Shape(Poly.rect(0.4, 0.5));
     let shape2 = new Shape(Poly.translate(Poly.rect(0.3, 0.3), -0.1, 0));
-    super([shape1, shape2]);
+    super([shape1, shape2], config);
   }
 }
 
 
 class Well extends Drawing {
-  constructor() {
+  /**
+   * @param {Map} config the current config.
+   * @return {Well}
+   */
+  constructor(config) {
     let r = 0.4;
     let shape1 = new Shape(Poly.regular(16, r));
     let shape2 = new WaterShape(Poly.regular(16, r * 0.6));
-    super([shape1, shape2]);
+    super([shape1, shape2], config);
   }
 }
 
 
 class Chest extends Drawing {
-  constructor() {
+  /**
+   * @param {Map} config the current config.
+   * @return {Chest}
+   */
+  constructor(config) {
     super([
       new Shape(Poly.rect(0.6, 0.8)),
       new Shape([new paper.Point(-0.3, -0.25), new paper.Point(0.3, -0.25)], false),
       new Shape([new paper.Point(-0.3, -0.15), new paper.Point(0.3, -0.15)], false),
       new Shape([new paper.Point(-0.3, 0.15), new paper.Point(0.3, 0.15)], false),
       new Shape([new paper.Point(-0.3, 0.25), new paper.Point(0.3, 0.25)], false)
-    ]);
+    ], config);
   }
 }
 
 
 class Box extends Drawing {
-  constructor() {
+  /**
+   * @param {Map} config the current config.
+   * @return {Box}
+   */
+  constructor(config) {
     super([
       new Shape(Poly.rect(0.6, 0.6)),
       new Shape([new paper.Point(-0.1, -0.3), new paper.Point(-0.1, 0.3)], false),
       new Shape([new paper.Point(0.1, -0.3), new paper.Point(0.1, 0.3)], false)
-    ]);
+    ], config);
   }
 }
 
 
 class Barrel extends Drawing {
-  constructor() {
+  /**
+   * @param {Map} config the current config.
+   * @return {Barrel}
+   */
+  constructor(config) {
     let r = 0.25, s = Math.cos(Math.PI/6);
     let r2 = r / 2, rs = r * s;
     super([
@@ -2136,25 +2181,33 @@ class Barrel extends Drawing {
       new Shape([new paper.Point(-r, 0), new paper.Point(r, 0)], false),
       new Shape([new paper.Point(-rs, -r2), new paper.Point(rs, -r2)], false),
       new Shape([new paper.Point(-rs, r2), new paper.Point(rs, r2)], false)
-    ]);
+    ], config);
   }
 }
 
 
 class Fountain extends Drawing {
-  constructor() {
+  /**
+   * @param {Map} config the current config.
+   * @return {Fountain}
+   */
+  constructor(config) {
     let r = 0.5;
     super([
       new Shape(Poly.regular(24, r)),
       new WaterShape(Poly.regular(24, r * 0.8)),
       new Shape(Poly.regular(12, r * 0.2))
-    ]);
+    ], config);
   }
 }
 
 
 class Dais extends Drawing {
-  constructor() {
+  /**
+   * @param {Map} config the current config.
+   * @return {Dais}
+   */
+  constructor(config) {
     let r1 = 1.50, r2 = 1.25, da = 11.25 /* degrees */;
     let poly = [], p;
     for (let i = -8; i < 9; i++) {
@@ -2173,14 +2226,18 @@ class Dais extends Drawing {
     let shape3 = new Shape(poly);
     shape3.closed = false;
 
-    super([shape1, shape2, shape3]);
+    super([shape1, shape2, shape3], config);
   }
 }
 
 
 class SmallDais extends Drawing {
-  constructor() {
-    super([new Shape(Poly.regular(32, 1.25)), new NoFillShape(Poly.regular(32, 1))]);
+  /**
+   * @param {Map} config the current config.
+   * @return {SmallDais}
+   */
+  constructor(config) {
+    super([new Shape(Poly.regular(32, 1.25)), new NoFillShape(Poly.regular(32, 1))], config);
   }
 }
 
@@ -2505,7 +2562,7 @@ class Room extends paper.Rectangle {
       let f = Random.float();
       let size = 0.1 + (crumbling ? 0.6 : 0.4) * (f * f * f);
       let p = this.scatter(size);
-      this.props.push(new Boulder().place(p, Random.float(180), size));
+      this.props.push(new Boulder(this.dungeon.config).place(p, Random.float(180), size));
     }
     let aisleAvailable = this.aisleAvailable();
     let object =
@@ -2526,7 +2583,7 @@ class Room extends paper.Rectangle {
         this.addFountain();
       } else if (this.desc == null && Random.maybe(this.dungeon.config.wellChance * (this.round ? 2 : 1))) {
         this.dungeon.config.wellChance = 0;
-        this.props.push(new Well().place(this.center));
+        this.props.push(new Well(this.dungeon.config).place(this.center));
       } else {
         if (Random.maybe(1/3)) {
           let n = Random.float(area / 5);
@@ -2555,25 +2612,25 @@ class Room extends paper.Rectangle {
       }
       if (this.dungeon.tags.includes('multi-level')) {
         if (Random.maybe(0.5)) {
-          this.props.push(new Statue().place(this.center));
+          this.props.push(new Statue(this.dungeon.config).place(this.center));
         } else if (!this.round) {
-          this.props.push(new Dais().place(this.aisle(), Utils.axis2angle(this.axis)));
+          this.props.push(new Dais(this.dungeon.config).place(this.aisle(), Utils.axis2angle(this.axis)));
         }
       } else {
         let pos = this.round ? this.center() : this.aisle();
-        let drawing = this.round ? new SmallDais() : new Dais();
+        let drawing = this.round ? new SmallDais(this.dungeon.config) : new Dais(this.dungeon.config);
         let rotation = Utils.axis2angle(this.axis);
         this.props.push(drawing.place(pos, rotation));
 
         if (this.dungeon.tags.includes('temple')) {
-          drawing = new Altar();
+          drawing = new Altar(this.dungeon.config);
         } else if (this.dungeon.tags.includes('tomb')) {
-          drawing = new Sarcophagus();
+          drawing = new Sarcophagus(this.dungeon.config);
           rotation = Utils.axis2angle(this.axis.abs());
         } else if (this.dungeon.tags.includes('dwelling')) {
-          drawing = new Throne();
+          drawing = new Throne(this.dungeon.config);
         } else {
-          drawing = new Statue();
+          drawing = new Statue(this.dungeon.config);
           rotation = 0;
         }
         this.props.push(drawing.place(pos, rotation));
@@ -2582,44 +2639,44 @@ class Room extends paper.Rectangle {
   }
 
   addTapestry() {
-    let inst = new Tapestry(this.width - 2);
+    let inst = new Tapestry(this.width - 2, this.dungeon.config);
     inst.place(this.aisle(), Utils.axis2angle(-this.axis.y, this.axis.x));
     this.props.push(inst);
     return inst;
   }
 
   addStatue() {
-    let inst = new Statue().place(this.aisle());
+    let inst = new Statue(this.dungeon.config).place(this.aisle());
     this.props.push(inst);
     return inst;
   }
 
   addSarcophagus() {
-    let inst = new Sarcophagus().place(this.aisle(), Utils.axis2angle(this.axis.abs()));
+    let inst = new Sarcophagus(this.dungeon.config).place(this.aisle(), Utils.axis2angle(this.axis.abs()));
     this.props.push(inst);
     return inst;
   }
 
   addAltar() {
-    let inst = new Altar().place(this.aisle(), Utils.axis2angle(this.axis));
+    let inst = new Altar(this.dungeon.config).place(this.aisle(), Utils.axis2angle(this.axis));
     this.props.push(inst);
     return inst;
   }
 
   addThrone() {
-    let inst = new Throne().place(this.aisle(), Utils.axis2angle(this.axis));
+    let inst = new Throne(this.dungeon.config).place(this.aisle(), Utils.axis2angle(this.axis));
     this.props.push(inst);
     return inst;
   }
 
   addWell() {
-    let inst = new Well().place(this.aisle());
+    let inst = new Well(this.dungeon.config).place(this.aisle());
     this.props.push(inst);
     return inst;
   }
 
   addChest() {
-    let inst = new Chest().place(this.aisle(), Utils.axis2angle(this.axis));
+    let inst = new Chest(this.dungeon.config).place(this.aisle(), Utils.axis2angle(this.axis));
     this.props.push(inst);
     return inst;
   }
@@ -2627,14 +2684,14 @@ class Room extends paper.Rectangle {
   addCrate() {
     let size = 0.4 + 0.6 * Random.times(3);
     let p = this.scatter(size);
-    let inst = new Box().place(p, Random.float(180), size);
+    let inst = new Box(this.dungeon.config).place(p, Random.float(180), size);
     this.props.push(inst);
     return inst;
   }
 
   addBarrel(size) {
     let p = this.scatter(size);
-    let inst = new Barrel().place(p, Random.float(180), size);
+    let inst = new Barrel(this.dungeon.config).place(p, Random.float(180), size);
     this.props.push(inst);
     return inst;
   }
@@ -2645,7 +2702,7 @@ class Room extends paper.Rectangle {
 
   addFountain() {
     let size = Math.sqrt((Math.min(this.width, this.height) - 2) / 3) * 1.5;
-    let inst = new Fountain().place(this.center(), 0, size);
+    let inst = new Fountain(this.dungeon.config).place(this.center(), 0, size);
     this.props.push(inst);
     return inst;
   }
@@ -2695,7 +2752,7 @@ class Room extends paper.Rectangle {
    */
   drawCorners(layer) {
     if (!this.round) {
-      let o = this.dungeon.config.strokeNormal * 1.5;
+      let o = this.dungeon.config.style.strokeNormal * 1.5;
       if (this.dungeon.getDoor(this.inner.topLeft.subtract([1, 0])) == null && this.dungeon.getDoor(this.inner.topLeft.subtract([0, 1])) == null) {
         this.drawCorner(layer, this.inner.left * 30 + o, this.inner.top * 30 + o, 1, 0);
       }
@@ -2720,8 +2777,8 @@ class Room extends paper.Rectangle {
    */
   drawCorner(layer, x, y, rx, ry) {
     let config = this.dungeon.config;
-    let n2 = config.strokeNormal / 2;
-    let span = 30 - config.strokeNormal * 2;
+    let n2 = config.style.strokeNormal / 2;
+    let span = 30 - config.style.strokeNormal * 2;
     let poly = [
       new paper.Point(-n2, -n2),
       new paper.Point(n2 + span * Random.times(3), -n2),
@@ -2732,7 +2789,7 @@ class Room extends paper.Rectangle {
     Poly.asTranslate(poly, x, y);
     layer.addChild(new paper.Path({
       segments: Poly.chaikinRender(poly, true, 2, [poly[0]]),
-      fillColor: config.colorInk,
+      fillColor: config.style.colorInk,
       closed: true
     }));
   };
@@ -2811,14 +2868,14 @@ class Room extends paper.Rectangle {
     let segs = Math.ceil(size * 5);
     dir = dir.multiply(-30 * size / segs);
     pos = pos.multiply(30);
-    let poly = [pos.subtract(dir.normalize(0.5 * this.dungeon.config.strokeThick)), pos];
+    let poly = [pos.subtract(dir.normalize(0.5 * this.dungeon.config.style.strokeThick)), pos];
     let t = Random.maybe(0.5) ? 1 : -1;
     for (let i = 0; i < segs; i++) {
       t = -t;
       pos = pos.add(dir.rotate(t * Random.float(45)));
       poly.push(pos);
     }
-    this.drawStroke(layer, poly, this.dungeon.config.strokeThick * size);
+    this.drawStroke(layer, poly, this.dungeon.config.style.strokeThick * size);
   }
 
   /**
@@ -2858,7 +2915,7 @@ class Room extends paper.Rectangle {
     b.unshift(p2.subtract(n));
     layer.addChild(new paper.Path({
       segments: a.concat(b),
-      fillColor: this.dungeon.config.colorInk,
+      fillColor: this.dungeon.config.style.colorInk,
       closed: true
     }));
   }
@@ -2868,7 +2925,7 @@ class Room extends paper.Rectangle {
    */
   drawRectGrid(layer) {
     let config = this.dungeon.config;
-    let strokeWidth = config.gridMode == GridType_DOTTED ? config.strokeNormal : config.strokeThin;
+    let strokeWidth = config.gridMode == GridType_DOTTED ? config.style.strokeNormal : config.style.strokeThin;
     let x, y;
     for (let i = 1; i < this.height; i++) {
       y = (this.top + i) * 30;
@@ -2876,7 +2933,7 @@ class Room extends paper.Rectangle {
         from: [this.left * 30, y],
         to: [this.right * 30, y],
         strokeWidth: strokeWidth,
-        strokeColor: config.colorInk,
+        strokeColor: config.style.colorInk,
         dashArray: config.gridPattern
       }));
     }
@@ -2886,7 +2943,7 @@ class Room extends paper.Rectangle {
         from: [x, this.top * 30],
         to: [x, this.bottom * 30],
         strokeWidth: strokeWidth,
-        strokeColor: config.colorInk,
+        strokeColor: config.style.colorInk,
         dashArray: config.gridPattern
       }));
     }
@@ -2897,7 +2954,7 @@ class Room extends paper.Rectangle {
    */
   drawCircGrid(layer) {
     let config = this.dungeon.config;
-    let strokeWidth = config.gridMode == GridType_DOTTED ? config.strokeNormal : config.strokeThin;
+    let strokeWidth = config.gridMode == GridType_DOTTED ? config.style.strokeNormal : config.style.strokeThin;
     let c = this.center;
     let r = this.width * 30 / 2;
     let x, y, s;
@@ -2909,14 +2966,14 @@ class Room extends paper.Rectangle {
         from: [c.x * 30 + s, y],
         to: [c.x * 30 - s, y],
         strokeWidth: strokeWidth,
-        strokeColor: config.colorInk,
+        strokeColor: config.style.colorInk,
         dashArray: config.gridPattern
       }));
       layer.addChild(new paper.Path.Line({
         from: [x, c.y * 30 + s],
         to: [x, c.y * 30 - s],
         strokeWidth: strokeWidth,
-        strokeColor: config.colorInk,
+        strokeColor: config.style.colorInk,
         dashArray: config.gridPattern
       }));
     }
@@ -2961,14 +3018,14 @@ class Room extends paper.Rectangle {
    */
   drawColumn(layer, pos, angle=0) {
     let config = this.dungeon.config;
-    let strokeColor = config.colorInk;
+    let strokeColor = config.style.colorInk;
     let strokeWidth, fillColor;
     if (Random.maybe(config.columnShattered)) {
-      strokeWidth = config.strokeNormal;
-      fillColor = config.showBlackAndWhite ? config.colorPaper : config.colorBg;
+      strokeWidth = config.style.strokeNormal;
+      fillColor = config.blackAndWhite ? config.style.colorPaper : config.style.colorBg;
     } else {
-      strokeWidth = config.strokeThick;
-      fillColor = config.showBlackAndWhite ? config.colorPaper : config.colorShading;
+      strokeWidth = config.style.strokeThick;
+      fillColor = config.blackAndWhite ? config.style.colorPaper : config.style.colorShading;
     }
     let r = config.columnRadius * 30;
     if (config.columnSquare) {
@@ -3164,8 +3221,8 @@ class Door extends paper.Point {
     Poly.asTranslate(line, this.add(0.5).multiply(30));
     return new paper.Path({
       segments: line,
-      strokeWidth: config.gridMode == GridType_DOTTED ? config.strokeNormal : config.strokeThin,
-      strokeColor: config.colorInk,
+      strokeWidth: config.gridMode == GridType_DOTTED ? config.style.strokeNormal : config.style.strokeThin,
+      strokeColor: config.style.colorInk,
       dashArray: config.gridPattern
     });
   }
@@ -3175,8 +3232,8 @@ class Door extends paper.Point {
    * @param {Map} config
    */
   draw(layer, config) {
-    let thick = config.hatchingStyle == 'Stonework' || config.hatchingStyle == 'Bricks' ? config.strokeNormal : config.strokeThick;
-    let white = config.blackAndWhite ? config.colorPaper : config.colorBg;
+    let thick = config.style.hatchingStyle == 'Stonework' || config.style.hatchingStyle == 'Bricks' ? config.style.strokeNormal : config.style.strokeThick;
+    let white = config.blackAndWhite ? config.style.colorPaper : config.style.colorBg;
     let dir = this.dir;
     let pos = this.add(0.5).multiply(30);
     let size;
@@ -3192,7 +3249,7 @@ class Door extends paper.Point {
           point: pos.subtract(size.divide(2)),
           size: size,
           strokeWidth: thick,
-          strokeColor: config.colorInk,
+          strokeColor: config.style.colorInk,
           fillColor: white
         }));
         if (this.type == Door.SPECIAL) {
@@ -3200,7 +3257,7 @@ class Door extends paper.Point {
             from: pos.subtract(dir.multiply(30/8)),
             to: pos.add(dir.multiply(30/8)),
             strokeWidth: thick,
-            strokeColor: config.colorInk
+            strokeColor: config.style.colorInk
           }));
         }
         break;
@@ -3209,7 +3266,7 @@ class Door extends paper.Point {
           layer.addChild(new paper.Path.Circle({
             center: pos.add(dir.multiply(18 * i / 3)),
             radius: thick / 2,
-            fillColor: config.colorInk
+            fillColor: config.style.colorInk
           }));
         }
         break;
@@ -3223,7 +3280,7 @@ class Door extends paper.Point {
           point: pos.subtract(size.divide(2)),
           size: size,
           strokeWidth: thick,
-          strokeColor: config.colorInk,
+          strokeColor: config.style.colorInk,
           fillColor: white
         }));
 
@@ -3231,8 +3288,8 @@ class Door extends paper.Point {
         layer.addChild(new paper.Path.Line({
           from: pos.subtract(d),
           to: pos.add(d),
-          strokeWidth: config.strokeNormal,
-          strokeColor: config.colorInk
+          strokeWidth: config.style.strokeNormal,
+          strokeColor: config.style.colorInk
         }));
         break;
       case Door.STAIRS:
@@ -3245,8 +3302,8 @@ class Door extends paper.Point {
             layer.addChild(new paper.Path.Line({
             from: pos.add(d1).subtract(d2),
             to: pos.add(d1).add(d2),
-            strokeWidth: config.strokeNormal,
-            strokeColor: config.colorInk
+            strokeWidth: config.style.strokeNormal,
+            strokeColor: config.style.colorInk
           }));
         }
         break;
@@ -4440,13 +4497,13 @@ class MapGenerator {
   }
 
   drawShape(shapes, seams) {
-    let thickness = this.config.hatchingStyle == 'Stonework' || this.config.hatchingStyle == 'Bricks' ? this.config.strokeNormal : this.config.strokeThick;
-    let white = this.config.blackAndWhite ? this.config.colorPaper : this.config.colorBg;
+    let thickness = this.config.style.hatchingStyle == 'Stonework' || this.config.style.hatchingStyle == 'Bricks' ? this.config.style.strokeNormal : this.config.style.strokeThick;
+    let white = this.config.blackAndWhite ? this.config.style.colorPaper : this.config.style.colorBg;
     shapes.forEach(poly =>
       this.shape.addChild(new paper.Path({
         segments: poly,
         closed: true,
-        strokeColor: this.config.colorInk,
+        strokeColor: this.config.style.colorInk,
         strokeWidth: thickness * 2,
         fillColor: white
       }))
@@ -4484,9 +4541,9 @@ class MapGenerator {
   }
 
   updateWater() {
-    let fillColor = this.config.blackAndWhite ? this.config.colorPaper : this.config.colorWater;
-    let strokeWidth = this.config.strokeNormal;
-    let strokeColor = this.config.colorInk;
+    let fillColor = this.config.blackAndWhite ? this.config.style.colorPaper : this.config.style.colorWater;
+    let strokeWidth = this.config.style.strokeNormal;
+    let strokeColor = this.config.style.colorInk;
 
     this.flood.edges.forEach(poly => {
       let smoothed = Poly.chaikinRender(poly, true, 3);
@@ -4501,7 +4558,7 @@ class MapGenerator {
 
     let pattern = new Array(9);
     for (let i = 0; i < pattern.length; i++) {
-      pattern[i] = this.config.strokeNormal + 30 * Math.abs(Random.times(4) * 2 - 1);
+      pattern[i] = this.config.style.strokeNormal + 30 * Math.abs(Random.times(4) * 2 - 1);
     }
     this.flood.ripples1.forEach(poly => {
       let smoothed = Poly.chaikinRender(poly, true, 3);
@@ -4515,8 +4572,8 @@ class MapGenerator {
 
     pattern = new Array(10);
     for (let i = 0; i < pattern.length; i+=2) {
-      pattern[i] = this.config.strokeNormal + 30 * Math.abs(Random.times(4) * 2 - 1);
-      pattern[i + 1] = this.config.strokeNormal + 30 * Math.abs(Random.times(4) * 2 - 1) * 5;
+      pattern[i] = this.config.style.strokeNormal + 30 * Math.abs(Random.times(4) * 2 - 1);
+      pattern[i + 1] = this.config.style.strokeNormal + 30 * Math.abs(Random.times(4) * 2 - 1) * 5;
     }
     this.flood.ripples2.forEach(poly => {
       let smoothed = Poly.chaikinRender(poly, true, 3);
@@ -4530,7 +4587,7 @@ class MapGenerator {
   }
 
   drawShadows(shapes) {
-    if (this.config.shadowColor === '#FFFFFFFF') {
+    if (this.config.style.shadowColor === '#FFFFFFFF') {
       return;
     }
 
@@ -4551,14 +4608,14 @@ class MapGenerator {
     this.shadow.addChild(mask);
     this.shadow.clipped = true;
 
-    let strokeWidth = 66 * this.config.shadowDist;
+    let strokeWidth = 66 * this.config.style.shadowDist;
     this.shadow.blendMode = 'multiply';
     shapes.forEach(poly => {
       this.shadow.addChildren([
         new paper.Path({
           segments: poly,
           closed: true,
-          strokeColor: this.config.shadowColor,
+          strokeColor: this.config.style.shadowColor,
           strokeWidth: strokeWidth,
         }),
         new paper.Path({
@@ -4573,7 +4630,7 @@ class MapGenerator {
   }
 
   adjustShadowsAngle() {
-    let a = new paper.Point({length: 30 * this.config.shadowDist, angle: 45 - this.config.rotation});
+    let a = new paper.Point({length: 30 * this.config.style.shadowDist, angle: 45 - this.config.rotation});
     this.shadow.position = a;
     if (this.shadow.clipped) {
       this.shadow.firstChild.position = a.rotate(180);
@@ -4612,7 +4669,7 @@ class MapGenerator {
     } else if (config.gridMode == GridType_SOLID) {
       config.gridPattern = [30 * Random.float(4), 15 * Math.abs(Random.times(4) * 2 - 1), 30 * Random.float(4, 8), 15 * Math.abs(Random.times(4) * 2 - 1)];
     } else {
-      config.gridPattern = [config.strokeNormal * 0.5, config.strokeNormal * (3 + Random.times(3))];
+      config.gridPattern = [config.style.strokeNormal * 0.5, config.style.strokeNormal * (3 + Random.times(3))];
     }
   }
 
@@ -4685,7 +4742,7 @@ class MapGenerator {
    * @param {number} level the flood level.
    */
   setFloodLevel(level) {
-    this.config.floodLevel = level;
+    this.config.waterLevel = level;
     this.flood.setLevel(level);
     this.updateWater();
   }
