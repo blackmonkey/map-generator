@@ -1816,6 +1816,24 @@ class Poly {
   }
 
   /**
+   * TODO: 看起来是在找两根线的交叉点，待确认。
+   * @param {paper.Point} p1
+   * @param {paper.Point} d1
+   * @param {paper.Point} p2
+   * @param {paper.Point} d2
+   * @return {paper.Point}
+   */
+  static intersectLines(p1, d1, p2, d2) {
+    if (d1.isCollinear(d2)) {
+      return null;
+    }
+    let d = d1.cross(d2);
+    let t2 = (d1.y * (p2.x - p1.x) - d1.x * (p2.y - p1.y)) / d;
+    let t1 = Math.abs(d1.x) > Math.abs(d1.y) ? (p2.x - p1.x + d2.x * t2) / d1.x : (p2.y - p1.y + d2.y * t2) / d1.y;
+    return new paper.Point(t1, t2);
+  }
+
+  /**
    * @param {paper.Point} p1
    * @param {paper.Point} p2
    * @param {number} ratio
@@ -1879,6 +1897,545 @@ class Poly {
     }
     return l;
   };
+
+  /**
+   * @param {paper.Path} path
+   * @param {number} d the expanding distance in every dimentions.
+   * @return {paper.Path} the expanded clone path.
+   */
+  static expandPath(path, d) {
+    path.translate(new paper.Point(-d, -d));
+    d *= 2;
+    return path.scale((path.bounds.width + d)/path.bounds.width, (path.bounds.height + d)/path.bounds.height);
+  }
+
+  /**
+   * @param {paper.Path} path
+   * @return {paper.Point}
+   */
+  static pickPoint(path) {
+    let p = new paper.Point();
+    let bounds = path.bounds;
+    while (true) {
+      p.x = Random.int(bounds.left, bounds.right);
+      p.y = Random.int(bounds.top, bounds.bottom);
+      if (path.contains(p)) {
+        return p;
+      }
+    }
+  }
+}
+
+
+class PathCollection { // <= com_watabou_dungeon_utils_PoissonDiskShapeCollection
+  /**
+   * @param {paper.Path[]} shapes
+   * @return {PathCollection}
+   */
+  constructor(shapes) {
+    this.shapes = shapes;
+  }
+
+  /**
+   * @return {paper.Rectangle}
+   */
+  getBounds() {
+    let bounds = new paper.Rectangle();
+    this.shapes.forEach(shape => bounds = bounds.unite(shape));
+    return bounds;
+  }
+
+  /**
+   * @return {paper.Point}
+   */
+  pickPoint() {
+    return Poly.pickPoint(Random.choose(this.shapes));
+  }
+
+  /**
+   * @param {paper.Point} p
+   * @returns {boolean}
+   */
+  contains(p) {
+    return this.shapes.some(shape => shape.contains(p));
+  }
+}
+
+
+class PoissonDisk {
+  /**
+   * @param {number} r
+   * @param {any} shape
+   * @return {PoissonDisk}
+   */
+  constructor(r, shape) {
+    this.r = r;
+    this.shape = shape;
+    this.points = [];
+    this.queue = [];
+    this.cellSize = r / Math.sqrt(2);
+    if (shape != null) {
+      this.init(shape.getBounds());
+      this.emit(shape.pickPoint());
+    }
+  }
+
+  /**
+   * @param {paper.Rectangle} bounds
+   */
+  init(bounds) {
+    this.xmin = bounds.left;
+    this.ymin = bounds.top;
+    this.xmax = bounds.right;
+    this.ymax = bounds.bottom;
+    this.gridWidth = Math.ceil((this.xmax - this.xmin) / this.cellSize);
+    this.gridHeight = Math.ceil((this.ymax - this.ymin) / this.cellSize);
+    this.grid = new Array(this.gridWidth * this.gridHeight).fill(null);
+  }
+
+  /**
+   * @return {boolean}
+   */
+  step() {
+    if (this.queue.length == 0) {
+      return false;
+    }
+    let p = Random.choose(this.queue);
+    let emitted = false;
+    for (let i = 0; i < 30; i++) {
+      let q = new paper.Point({length: Random.float(this.r, 2 * this.r), angle: Random.float(360)}).add(p);
+      if (this.shape.contains(q) && this.contains(q)) {
+        emitted = true;
+        this.emit(q);
+      }
+    }
+    if (!emitted) {
+      Utils.arrayRemove(this.queue, p);
+    }
+    return this.queue.length > 0;
+  }
+
+  /**
+   * @param {paper.Point} p
+   * @returns {boolean}
+   */
+  contains(p) {
+    let x = Math.floor((p.x - this.xmin) / this.cellSize);
+    let y = Math.floor((p.y - this.ymin) / this.cellSize);
+    if (x < 0 || y < 0 || x >= this.gridWidth || y >= this.gridHeight) {
+      return false;
+    }
+    let n = 2;
+    let left = Math.max(x - n, 0);
+    let top = Math.max(y - n, 0);
+    let right = Math.min(x + n + 1, this.gridWidth);
+    let bottom = Math.min(y + n + 1, this.gridHeight);
+    for (y = top; y < bottom; y++) {
+      let o = y * this.gridWidth;
+      for (x = left; x < right; x++) {
+        let q = this.grid[o + x];
+        if (q != null && p.getDistance(q) < this.r) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  /**
+   * @param {paper.Point} p
+   */
+  emit(p) {
+    this.points.push(p);
+    this.queue.push(p);
+    this.grid[Math.floor((p.y - this.ymin) / this.cellSize) * this.gridWidth + Math.floor((p.x - this.xmin) / this.cellSize)] = p;
+  }
+
+  /**
+   * @param {paper.Point} p
+   * @returns {paper.Point[]}
+   */
+  getNeighbours(p) {
+    let res = [];
+    let n = 2;
+    let x = Math.floor((p.x - this.xmin) / this.cellSize);
+    let y = Math.floor((p.y - this.ymin) / this.cellSize);
+    let left = Math.max(x - n, 0);
+    let top = Math.max(y - n, 0);
+    let right = Math.min(x + n + 1, this.gridWidth);
+    let bottom = Math.min(y + n + 1, this.gridHeight);
+    for (y = top; y < bottom; y++) {
+      let o = y * this.gridWidth;
+      for (x = left; x < right; x++) {
+        let q = this.grid[o + x];
+        if (q != null) {
+          res.push(q);
+        }
+      }
+    }
+    return res;
+  }
+}
+
+
+class Shading {
+  /**
+   * @param {paper.Path[]} shapes
+   * @param {Map} config
+   */
+  static getPoisson(shapes, config) {
+    let shape = new PathCollection(shapes);
+    let pd = new PoissonDisk(config.style.hatchingSize, shape);
+    while (pd.step()) {}
+    return pd;
+  };
+
+  /**
+   * @param {paper.Layer} layer
+   * @param {Map} config
+   * @param {paper.Point} p1
+   * @param {paper.Point} p2
+   */
+  static stroke(layer, config, p1, p2) {
+    if (config.brushShadingStrokes) {
+      let v = p2.subtract(p1).rotate(90).normalize(config.style.strokeHatching * 1.5);
+      let po = Poly.lerp(p1, p2, 0.3).add(v);
+      let pp = Poly.lerp(p1, p2, 0.6).add(v);
+      layer.addChild(new paper.Path({
+        segments: Poly.chaikinRender([p1, po, pp, p2], false, 1),
+        fillColor: config.style.colorInk,
+        closed: true
+      }));
+    } else {
+      layer.addChild(new paper.Path.Line({
+        from: p1,
+        to: p2,
+        strokeWidth: config.style.strokeHatching,
+        strokeColor: config.style.colorInk
+      }));
+    }
+  }
+
+  /**
+   * @param {paper.Layer} layer
+   * @param {paper.Path[]} shapes
+   * @param {Map} config
+   */
+  static draw(layer, shapes, config) {
+    if (config.style.hatchingStyle == 'Stonework') {
+      Shading.doStonework(layer, shapes, config);
+    } else if (config.style.hatchingStyle == 'Bricks') {
+      Shading.doBricks(layer, shapes, config);
+    } else {
+      shapes = shapes.map(shape => Poly.expandPath(shape, config.style.hatchingDistance));
+      if (!config.blackAndWhite && config.style.colorShading != config.style.colorPaper) {
+        Shading.doShading(layer, shapes, config);
+      }
+      if (config.style.hatchingStyle == 'Default') {
+        let d = -config.style.hatchingDistance - config.style.hatchingSize * 2 / 3;
+        let excludes = shapes.map(shape => Poly.expandPath(shape.clone(), d));
+        if (config.preciseShadingStrokes) {
+          Shading.doImprovedHatching(layer, shapes, config, excludes);
+        } else {
+          Shading.doHatching(layer, shapes, config, excludes);
+        }
+        excludes.forEach(e => e.remove());
+      }
+    }
+    shapes.forEach(s => s.remove());
+  }
+
+  /**
+   * @param {paper.Layer} layer
+   * @param {paper.Path[]} shapes
+   * @param {Map} config
+   * @param {paper.Path[]} excludes
+   */
+  static doHatching(layer, shapes, config, excludes) {
+    let pd = Shading.getPoisson(shapes, config);
+    let points = pd.points;
+    let strokeWidth = config.style.hatchingStrokes;
+    let strokeHalfWidth = (strokeWidth - 1) / 2;
+    for (let point of points) {
+      if (excludes.some(shape => shape.contains(point))) {
+        continue;
+      }
+      let neighbours = pd.getNeighbours(point);
+      let c = neighbours.reduce((pre, cur) => {
+        let d1 = pre.equals(point) ? Infinity : pre.getDistance(point);
+        let d2 = cur.equals(point) ? Infinity : cur.getDistance(point);
+        return d1 > d2 ? cur : pre;
+      });
+      let a = point.subtract(c).angle;
+      if (a > 0) {
+        a += 60;
+      }
+      let v = new paper.Point({length: point.getDistance(c) / 2, angle: a});
+      let p1 = point.subtract(v);
+      let p2 = point.add(v);
+      v = v.rotate(90);
+      for (let i = 0; i < strokeWidth; i++) {
+        let o = v.multiply((i - strokeHalfWidth) / strokeHalfWidth);
+        Shading.stroke(layer, config, p1.add(o), p2.add(o));
+      }
+    }
+  }
+
+  /**
+   * @param {paper.Layer} layer
+   * @param {paper.Path[]} shapes
+   * @param {Map} config
+   * @param {paper.Path[]} excludes
+   */
+  static doImprovedHatching(layer, shapes, config, excludes) {
+    let pd = Shading.getPoisson(shapes, config);
+    let points = pd.points;
+    let strokeWidth = config.style.hatchingStrokes;
+    let strokeHalfWidth = (strokeWidth - 1) / 2;
+    let clusters = new Map();
+    for (let point of points) {
+      if (excludes.some(shape => shape.contains(point))) {
+        continue;
+      }
+      let strokes = [];
+      clusters.set(point, strokes);
+      let neighbours = pd.getNeighbours(point);
+      let c = neighbours.reduce((pre, cur) => {
+        let d1 = pre.equals(point) ? Infinity : pre.getDistance(point);
+        let d2 = cur.equals(point) ? Infinity : cur.getDistance(point);
+        return d1 > d2 ? cur : pre;
+      });
+      let a = point.subtract(c).angle;
+      if (a > 0) {
+        a += 60;
+      }
+      let dir = new paper.Point({length: config.style.hatchingSize / 2, angle: a});
+      for (let i = 0; i < strokeWidth; i++) {
+        let rate = (i - strokeHalfWidth) / strokeHalfWidth;
+        let v0 = dir.rotate(90).multiply(rate).add(point);
+        let ends = [];
+        let d0 = dir.rotate(180);
+        let minLen = 1.5;
+        for (let n of neighbours) {
+          let segs = clusters.get(n);
+          if (segs != null) {
+            for (let seg of segs) {
+              let p = Poly.intersectLines(v0, d0, seg[0], seg[1].subtract(seg[0]));
+              if (p != null && p.x > 0 && p.x < minLen && p.y >= 0 && p.y <= 1) {
+                minLen = p.x;
+              }
+            }
+          }
+        }
+        ends.push(v0.add(d0.multiply(minLen)));
+
+        minLen = 1.5;
+        for (let n of neighbours) {
+          let segs = clusters.get(n);
+          if (segs != null) {
+            for (let seg of segs) {
+              let p = Poly.intersectLines(v0, dir, seg[0], seg[1].subtract(seg[0]));
+              if (p != null && p.x > 0 && p.x < minLen && p.y >= 0 && p.y <= 1) {
+                minLen = p.x;
+              }
+            }
+          }
+        }
+        ends.push(v0.add(dir.multiply(minLen)));
+
+        strokes.push(ends);
+        Shading.stroke(layer, ends[0], ends[1]);
+      }
+    }
+  }
+
+  /**
+   * @param {paper.Layer} layer
+   * @param {paper.Path[]} shapes
+   * @param {Map} config
+   */
+  static doShading(layer, shapes, config) {
+    let strokeColor = new paper.Color(config.style.colorShading);
+    strokeColor.alpha = 0.4;
+    for (let shape of shapes) {
+      if ((shape instanceof paper.Path.Rectangle)) {
+        layer.addChild(new paper.Path.Rectangle({
+          point: shape.point,
+          size: shape.size,
+          radius: config.style.hatchingDistance * 2,
+          fillColor: config.style.colorShading,
+          strokeWidth: config.style.strokeThick,
+          strokeColor: strokeColor,
+        }));
+      } else {
+        layer.addChild(new paper.Path.Circle({
+          center: shape.center,
+          radius: config.style.hatchingDistance * 2,
+          fillColor: config.style.colorShading,
+          strokeWidth: config.style.strokeThick,
+          strokeColor: strokeColor,
+        }));
+      }
+    }
+  }
+
+  /**
+   * @param {paper.Layer} layer
+   * @param {paper.Path[]} shapes
+   * @param {Map} config
+   */
+  static doStonework(layer, shapes, config) {
+    let fillColor = config.blackAndWhite ? config.style.colorPaper : config.style.colorShading;
+    let overlapping = config.style.hatchingStrokes > 2;
+    for (let shape of shapes) {
+      if (shape instanceof paper.Path.Rectangle) {
+        let rect = shape.bounds;
+        let stonework = [];
+        let n = Math.ceil(rect.width / config.style.hatchingSize);
+        for (let i = 0; i < n; i++) {
+          stonework.push({
+            x: rect.left + rect.width * i / n,
+            y: rect.top,
+            hor: false
+          });
+        }
+        for (let i = 0; i < n; i++) {
+          stonework.push({
+            x: rect.left + rect.width * (1 - i / n),
+            y: rect.bottom,
+            hor: false
+          });
+        }
+        n = Math.ceil(rect.height / config.style.hatchingSize);
+        for (let i = 0; i < n; i++) {
+          stonework.push({
+            x: right,
+            y: rect.top + rect.height * i / n,
+            hor: true
+          });
+        }
+        for (let i = 0; i < n; i++) {
+          stonework.push({
+            x: rect.left,
+            y: rect.top + rect.height * (1 - i / n),
+            hor: true
+          });
+        }
+        if (overlapping) {
+          stonework = Utils.shuffle(stonework);
+        }
+        for (let stone of stonework) {
+          let width = config.style.hatchingSize * (overlapping ? 1 + Math.abs(Random.times(4) * 2 - 1) : 1);
+          let depth = config.style.hatchingDistance * Random.times(3) * 2;
+          let poly = stone.hor ? Poly.rect(depth, width) : Poly.rect(width, depth);
+          Poly.asTranslate(poly, stone);
+          layer.addChild(new paper.Path({
+            segments: poly,
+            strokeWidth: config.style.strokeNormal,
+            strokeColor: config.style.colorInk,
+            fillColor: fillColor,
+            closed: true
+          }));
+        }
+      } else {
+        let circle = shape.bounds;
+
+        /*
+         * 这段算法是计算出一个比path稍大（一个像素？）的边框，还有两处相似的地方，可以用下面的正则表达式搜索：
+         * Math.sqrt.*?\+\s*1
+         *
+         * TODO: 可以优化成直接找放大后的path的尺寸+1像素的边框。
+         */
+        let r = circle.bounds.width / 60;
+        r = Math.sqrt(r * r * 4 + 1) / 2;
+        r *= 30;
+
+        let n = Math.ceil(Math.PI * 2 * r / config.style.hatchingSize);
+        let step = Math.PI * 2 / n;
+        let stonework = [];
+        for (let i = 0; i < n; i++) {
+          stonework.push(step * i);
+        }
+        if (overlapping) {
+          stonework = Utils.shuffle(stonework);
+        }
+        for (let stone of stonework) {
+          let width = step * (overlapping ? 1 + Math.abs(Random.times(4) * 2 - 1) : 1) / 2;
+          let depth = config.style.hatchingDistance * Random.times(3);
+          let poly = [
+            new paper.Point({length: r + depth, angleInRadians: stone - width}),
+            new paper.Point({length: r + depth, angleInRadians: stone + width}),
+            new paper.Point({length: r - depth, angleInRadians: stone + width}),
+            new paper.Point({length: r - depth, angleInRadians: stone - width})
+          ];
+          Poly.asTranslate(poly, circle.center);
+          layer.addChild(new paper.Path({
+            segments: poly,
+            strokeWidth: config.style.strokeNormal,
+            strokeColor: config.style.colorInk,
+            fillColor: fillColor,
+            closed: true
+          }));
+        }
+      }
+    }
+  }
+
+  /**
+   * @param {paper.Layer} layer
+   * @param {paper.Path[]} shapes
+   * @param {Map} config
+   */
+  static doBricks(layer, shapes, config) {
+    let strokeWidth = config.style.strokeNormal;
+    let t = (config.style.hatchingDistance - strokeWidth) / 2;
+    for (let shape of shapes) {
+      shape = Poly.expandPath(shape.clone(), t + strokeWidth);
+      shape.fillColor = config.style.colorInk;
+    }
+    let shadingColor = config.blackAndWhite ? config.style.colorPaper : config.style.colorShading;
+    if (shadingColor == config.style.colorInk) {
+      return;
+    }
+    let up = new paper.Point(0, -t);
+    let down = new paper.Point(0, t);
+    let left = new paper.Point(-t, 0);
+    let right = new paper.Point(t, 0);
+    let step = config.style.hatchingSize;
+    for (let shape of shapes) {
+      let segs = [];
+      Poly.expandPath(shape.clone(), t).fillColor = shadingColor;
+      if (shape instanceof paper.Path.Rectangle) {
+        let rect = shape.bounds;
+        let n = Math.ceil(rect.w / step);
+        for (let i = 0; i < n; i++) {
+          segs.push([new paper.Point(rect.x + rect.w * (i + Random.times(3)) / n,rect.y), up]);
+          segs.push([new paper.Point(rect.x + rect.w * (1 - (i + Random.times(3)) / n),rect.y + rect.h), down]);
+        }
+        n = Math.ceil(rect.h / step);
+        for (let i = 0; i < n; i++) {
+          segs.push([new paper.Point(rect.x + rect.w,rect.y + rect.h * (i + Random.times(3)) / n), right]);
+          segs.push([new paper.Point(rect.x,rect.y + rect.h * (1 - (i + Random.times(3)) / n)), left]);
+        }
+      } else {
+        let circle = shape.bounds;
+        let n = Math.ceil(shape.length / step);
+        for (let i = 0; i < n; i++) {
+          let d1 = new paper.Point({length: 1, angleInRadians: Math.PI * 2 * (i + Random.times(3)) / n});
+          let p1 = circle.center;
+          segs.push([p1.add(d1.multiply(circle.width/2)), d1.multiply(t)]);
+        }
+      }
+      for (let [p, d] of segs) {
+        layer.addChild(new paper.Path.Line({
+          from: p,
+          to: p.add(d),
+          strokeWidth: config.style.strokeNormal,
+          strokeColor: config.style.colorInk
+        }));
+      }
+    }
+  }
 }
 
 
@@ -1946,12 +2503,11 @@ class Shape extends paper.Path {
    * @return {Shape}
    */
   place(pos, angle=0, scale=1) {
-    let inst = this.clone();
-    inst.visible = true;
-    inst.rotate(angle);
-    inst.scale(scale * 30);
-    inst.position = pos.multiply(30).add(inst.bounds.size.divide(2));
-    return inst;
+    this.visible = true;
+    this.rotate(angle);
+    this.scale(scale * 30);
+    this.position = pos.multiply(30).add(this.bounds.size.divide(2));
+    return this;
   }
 }
 
@@ -3979,6 +4535,8 @@ class MapGenerator {
       showCorners: true,
       showShadow: true,
       showSecrets: true,
+      brushShadingStrokes: false,
+      preciseShadingStrokes: true,
     }, opts);
     this.updateGridPattern();
     paper.setup(canvasId);
@@ -3988,9 +4546,7 @@ class MapGenerator {
   getRect() {
     // TODO: change this.rooms to paper.Layer, then return this.rooms.bounds
     let bounds = new paper.Rectangle();
-    for(let room of this.rooms) {
-      bounds = bounds.unite(room);
-    }
+    this.rooms.forEach(room => bounds = bounds.unite(room));
     return bounds;
   }
 
@@ -4081,7 +4637,7 @@ class MapGenerator {
     }
     this.symmetry = new Deck(this.order);
     let iterCount = 0;
-    while (iterCount < 200) { // FIXME: replace this condition to `true`
+    while (iterCount < 500) { // FIXME: replace this condition to `true`
       this.rooms = [];
       this.doors = [];
       this.blocks = [];
@@ -4089,7 +4645,7 @@ class MapGenerator {
       let size = this.getRoomSize();
       let axis = Random.choose([Dot_UP, Dot_DOWN, Dot_LEFT, Dot_RIGHT]);
       this.queueRoom(null, new paper.Point(0, 0), axis, size.width, size.height);
-      while (this.queue.length > 0 && this.getSize() < this.maxSize && iterCount < 200) { // FIXME: remove condition `this.rooms.length < 100`
+      while (this.queue.length > 0 && this.getSize() < this.maxSize && iterCount < 500) { // FIXME: remove condition `this.rooms.length < 100`
         this.buildRoom();
         iterCount++;
       }
@@ -4493,7 +5049,7 @@ class MapGenerator {
   }
 
   drawShading() {
-    this.drawable.forEach(shape => this.shading.addChild(shape.getHatchingArea()));
+    Shading.draw(this.shading, this.drawable.map(shape => shape.getHatchingArea()), this.config);
   }
 
   drawShape(shapes, seams) {
@@ -4786,7 +5342,7 @@ class MapGenerator {
    */
   newDungeon(tags=[]) {
     this.reset(tags);
-    // this.layout(); // TODO
+    this.layout();
   }
 
   rerollNotes() {
@@ -4803,5 +5359,15 @@ class MapGenerator {
       return;
     }
     console.log(`MapGenerator.rearrangeNotes() rerolling`);
+  }
+
+  layout() { // TODO
+    let bounds = new paper.Rectangle();
+    paper.project.layers.forEach(layer => bounds=bounds.unite(layer.bounds));
+
+    let scale = Math.min(1, Math.min(paper.view.size.width/bounds.width, paper.view.size.height/bounds.height));
+    bounds = bounds.scale(scale);
+    let offset = new paper.Point((paper.view.size.width - bounds.width)/2, (paper.view.size.height - bounds.height)/2);
+    paper.project.layers.forEach(layer => layer.scale(scale).translate(offset));
   }
 }
