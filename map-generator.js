@@ -951,7 +951,7 @@ class Utils {
     if (p.equals(Dot_UP)) {
       return 90;
     }
-    if (p.equals(Dot_RIGHT)) {
+    if (p.equals(Dot_LEFT)) {
       return 180;
     }
     if (p.equals(Dot_DOWN)) {
@@ -2802,30 +2802,30 @@ class Room extends paper.Rectangle {
   /**
    * Construct a Room instance.
    * @param {paper.Point} origin
-   * @param {paper.Point} axis
+   * @param {paper.Point} yAxis
    * @param {number} width the width of this room.
    * @param {number} depth the height of this room.
    * @param {number} mirror
    * @return {Room} this Room instance.
    */
-  constructor(origin, axis, width, depth, mirror=1) {
+  constructor(origin, yAxis, width, depth, mirror=1) {
     let tl = new paper.Point(), sz = new paper.Size();
-    if (Dot_UP.equals(axis)) {
+    if (Dot_UP.equals(yAxis)) {
       tl.set(origin.x - (width >> 1), origin.y - depth + 1);
       sz.set(width, depth);
-    } else if (Dot_DOWN.equals(axis)) {
+    } else if (Dot_DOWN.equals(yAxis)) {
       tl.set(origin.x - (width >> 1), origin.y);
       sz.set(width, depth);
-    } else if (Dot_LEFT.equals(axis)) {
+    } else if (Dot_LEFT.equals(yAxis)) {
       tl.set(origin.x - depth + 1, origin.y - (width >> 1));
       sz.set(depth, width);
-    } else if (Dot_RIGHT.equals(axis)) {
+    } else if (Dot_RIGHT.equals(yAxis)) {
       tl.set(origin.x, origin.y - (width >> 1));
       sz.set(depth, width);
     } else {
-      console.log(`Room(origin=${origin}, axis=${axis}, width=${width}, depth=${depth}, mirror=${mirror})`);
-      tl.set(origin.x, 0);  // TODO: check this in com_watabou_dungeon_model_Room
-      sz.set(width, 0);  // TODO: check this in com_watabou_dungeon_model_Room
+      console.warn(`Unknown axis: Room(origin=${origin}, y-axis=${yAxis}, width=${width}, depth=${depth}, mirror=${mirror})`);
+      tl.set(origin.x, 0);
+      sz.set(width, 0);
     }
     super(tl, sz);
     this.hidden = false;
@@ -2840,7 +2840,7 @@ class Room extends paper.Rectangle {
     this.dungeon = null;
     this.desc = null;
     this.origin = origin;
-    this.axis = axis;
+    this.yAxis = yAxis;
     this.mirror = mirror;
     this.props = [];
     this.width = width;
@@ -2948,15 +2948,30 @@ class Room extends paper.Rectangle {
   }
 
   /**
-   * @param {number} px
-   * @param {number} py
-   * @return {paper.Point}
+   * Project the room's inner point to global canvas.
+   *
+   * `this.yAxis` is the global vector for the y-axis of the room's inner coordinate system.
+   *
+   * `this.mirror` indicates whether the x coordinate in the room's inner coordinates should be
+   * flipped or not.
+   *
+   * @param {number} px the inner x coordinate of the point.
+   * @param {number} py the inner y coordinate of the point.
+   * @return {paper.Point} the corresponding coordinates in global canvas.
    */
-  xy(px, py) {
+  local2global(px, py) {
+    // during projection:
     return new paper.Point(
-      this.origin.x - px * this.axis.y * this.mirror + py * this.axis.x,
-      this.origin.y + py * this.axis.y + px * this.axis.x * this.mirror
-    );
+        px * this.mirror, // flip the x.
+        -py               // the room's inner y axis is up, while global canvas's y axis is down.
+      )
+      // - when room's y axis is right, vector (px, py) should be rotated clockwise for 90 degrees.
+      // - when room's y axis is up, vector (px, py) should not be rotated.
+      // - when room's y axis is left, vector (px, py) should be rotated counterclockwise for 90 degrees.
+      // - when room's y axis is down, vector (px, py) should be rotated for 180 degrees.
+      .rotate(90 - Utils.axis2angle(this.yAxis))
+      // then move vector (px, py) according to room's origin
+      .add(this.origin);
   }
 
   /**
@@ -3017,31 +3032,31 @@ class Room extends paper.Rectangle {
   }
 
   /**
-   * @param {paper.Point} axis
+   * @param {paper.Point} dir
    * @return {Door|null}
    */
-  getWallDoor(axis) {
-    if (Dot_LEFT.equals(axis)) {
+  getWallDoor(dir) {
+    if (Dot_LEFT.equals(dir)) {
       return this.getDoorW();
     }
-    if (Dot_RIGHT.equals(axis)) {
+    if (Dot_RIGHT.equals(dir)) {
       return this.getDoorE();
     }
-    if (Dot_UP.equals(axis)) {
+    if (Dot_UP.equals(dir)) {
       return this.getDoorN();
     }
-    if (Dot_DOWN.equals(axis)) {
+    if (Dot_DOWN.equals(dir)) {
       return this.getDoorS();
     }
     return null;
   }
 
   /**
-   * @param {paper.Point} axis
+   * @param {paper.Point} dir
    * @return {boolean}
    */
-  isSolid(axis) {
-    let door = this.getWallDoor(axis);
+  isSolid(dir) {
+    let door = this.getWallDoor(dir);
     return door == null || door.type == Door.SECRET;
   }
 
@@ -3075,7 +3090,7 @@ class Room extends paper.Rectangle {
    * @return {boolean}
    */
   aisleAvailable() {
-    let door = this.dungeon.getDoor(this.xy(0, this.depth - 1));
+    let door = this.dungeon.getDoor(this.local2global(0, this.depth - 1));
     return door == null || door.type == Door.SECRET;
   }
 
@@ -3104,7 +3119,7 @@ class Room extends paper.Rectangle {
    * @return {paper.Point}
    */
   aisle() {
-    return this.xy(0, this.depth - 2).add(0.5);
+    return this.local2global(0, this.depth - 2).add(0.5);
   }
 
   createProps() {
@@ -3156,7 +3171,7 @@ class Room extends paper.Rectangle {
         }
       }
       if (!this.round) {
-        let door = this.dungeon.getDoor(this.xy(0, this.depth - 1));
+        let door = this.dungeon.getDoor(this.local2global(0, this.depth - 1));
         if ((door != null && door.type == Door.SECRET) || (door == null && Random.maybe(this.dungeon.config.tapestryChance / this.width))) {
           this.addTapestry();
         }
@@ -3170,19 +3185,19 @@ class Room extends paper.Rectangle {
         if (Random.maybe(0.5)) {
           this.props.push(new Statue(this.dungeon.config).place(this.center));
         } else if (!this.round) {
-          this.props.push(new Dais(this.dungeon.config).place(this.aisle(), Utils.axis2angle(this.axis)));
+          this.props.push(new Dais(this.dungeon.config).place(this.aisle(), Utils.axis2angle(this.yAxis)));
         }
       } else {
         let pos = this.round ? this.center() : this.aisle();
         let drawing = this.round ? new SmallDais(this.dungeon.config) : new Dais(this.dungeon.config);
-        let rotation = Utils.axis2angle(this.axis);
+        let rotation = Utils.axis2angle(this.yAxis);
         this.props.push(drawing.place(pos, rotation));
 
         if (this.dungeon.tags.includes('temple')) {
           drawing = new Altar(this.dungeon.config);
         } else if (this.dungeon.tags.includes('tomb')) {
           drawing = new Sarcophagus(this.dungeon.config);
-          rotation = Utils.axis2angle(this.axis.abs());
+          rotation = Utils.axis2angle(this.yAxis.abs());
         } else if (this.dungeon.tags.includes('dwelling')) {
           drawing = new Throne(this.dungeon.config);
         } else {
@@ -3196,7 +3211,7 @@ class Room extends paper.Rectangle {
 
   addTapestry() {
     let inst = new Tapestry(this.width - 2, this.dungeon.config);
-    inst.place(this.aisle(), Utils.axis2angle(-this.axis.y, this.axis.x));
+    inst.place(this.aisle(), Utils.axis2angle(-this.yAxis.y, this.yAxis.x));
     this.props.push(inst);
     return inst;
   }
@@ -3208,19 +3223,19 @@ class Room extends paper.Rectangle {
   }
 
   addSarcophagus() {
-    let inst = new Sarcophagus(this.dungeon.config).place(this.aisle(), Utils.axis2angle(this.axis.abs()));
+    let inst = new Sarcophagus(this.dungeon.config).place(this.aisle(), Utils.axis2angle(this.yAxis.abs()));
     this.props.push(inst);
     return inst;
   }
 
   addAltar() {
-    let inst = new Altar(this.dungeon.config).place(this.aisle(), Utils.axis2angle(this.axis));
+    let inst = new Altar(this.dungeon.config).place(this.aisle(), Utils.axis2angle(this.yAxis));
     this.props.push(inst);
     return inst;
   }
 
   addThrone() {
-    let inst = new Throne(this.dungeon.config).place(this.aisle(), Utils.axis2angle(this.axis));
+    let inst = new Throne(this.dungeon.config).place(this.aisle(), Utils.axis2angle(this.yAxis));
     this.props.push(inst);
     return inst;
   }
@@ -3232,7 +3247,7 @@ class Room extends paper.Rectangle {
   }
 
   addChest() {
-    let inst = new Chest(this.dungeon.config).place(this.aisle(), Utils.axis2angle(this.axis));
+    let inst = new Chest(this.dungeon.config).place(this.aisle(), Utils.axis2angle(this.yAxis));
     this.props.push(inst);
     return inst;
   }
@@ -3268,10 +3283,10 @@ class Room extends paper.Rectangle {
       return false;
     }
     let w2 = this.width >> 1, d2 = this.depth >> 1;
-    let a = this.xy(0, 0);
-    let b = this.xy(-w2, d2);
-    let c = this.xy(w2, d2);
-    let d = this.xy(0, this.depth - 1);
+    let a = this.local2global(0, 0);
+    let b = this.local2global(-w2, d2);
+    let c = this.local2global(w2, d2);
+    let d = this.local2global(0, this.depth - 1);
     return this.getDoors().every(door => a.equals(door) || b.equals(door) || c.equals(door) || d.equals(door));
   }
 
@@ -3288,16 +3303,16 @@ class Room extends paper.Rectangle {
   }
 
   getGrown() {
-    if (Dot_UP.equals(this.axis)) {
+    if (Dot_UP.equals(this.yAxis)) {
       return new paper.Rectangle(this.left, this.top - 1, this.width, this.height + 1);
     }
-    if (Dot_DOWN.equals(this.axis)) {
+    if (Dot_DOWN.equals(this.yAxis)) {
       return new paper.Rectangle(this.left, this.top, this.width, this.height + 1);
     }
-    if (Dot_LEFT.equals(this.axis)) {
+    if (Dot_LEFT.equals(this.yAxis)) {
       return new paper.Rectangle(this.left - 1, this.top, this.width + 1, this.height);
     }
-    if (Dot_RIGHT.equals(this.axis)) {
+    if (Dot_RIGHT.equals(this.yAxis)) {
       return new paper.Rectangle(this.left, this.top, this.width + 1, this.height);
     }
     return null;
@@ -3388,17 +3403,17 @@ class Room extends paper.Rectangle {
         let a, b;
         switch (Random.int(3)) {
           case 0:
-            p = this.axis;
+            p = this.yAxis;
             a = this.depth;
             b = this.width;
             break;
           case 1:
-            p = this.axis.rotate(90);
+            p = this.yAxis.rotate(90);
             a = this.width;
             b = this.depth;
             break;
           case 2:
-            p = this.axis.rotate(-90);
+            p = this.yAxis.rotate(-90);
             a = this.width;
             b = this.depth;
             break;
@@ -3554,7 +3569,7 @@ class Room extends paper.Rectangle {
         let p = new paper.Point({length:R, angle:a}).add(inner.center());
         this.drawColumn(layer, p.multiply(30), a);
       }
-    } else if (this.axis.x != 0) {
+    } else if (this.yAxis.x != 0) {
       for (let i = inner.left + 1; i < inner.right; i++) {
         this.drawColumn(layer, new paper.Point(i * 30, (inner.top + 1) * 30));
         this.drawColumn(layer, new paper.Point(i * 30, (inner.bottom - 1) * 30));
@@ -4643,8 +4658,8 @@ class MapGenerator {
       this.blocks = [];
       this.queue = [];
       let size = this.getRoomSize();
-      let axis = Random.choose([Dot_UP, Dot_DOWN, Dot_LEFT, Dot_RIGHT]);
-      this.queueRoom(null, new paper.Point(0, 0), axis, size.width, size.height);
+      let yAxis = Random.choose([Dot_UP, Dot_DOWN, Dot_LEFT, Dot_RIGHT]);
+      this.queueRoom(null, new paper.Point(0, 0), yAxis, size.width, size.height);
       while (this.queue.length > 0 && this.getSize() < this.maxSize && iterCount < 500) { // FIXME: remove condition `this.rooms.length < 100`
         this.buildRoom();
         iterCount++;
@@ -4659,7 +4674,7 @@ class MapGenerator {
     this.planner.plan();
     if (this.tags.includes('multi-level')) {
       let last = this.planner.last;
-      let exit = new Door(last.xy(0, last.depth - 1), last, null);
+      let exit = new Door(last.local2global(0, last.depth - 1), last, null);
       this.doors.push(exit);
     }
     while (this.createLoop() > 0) {}
@@ -4695,14 +4710,13 @@ class MapGenerator {
     return this.rooms.filter(room => room.isNormal()).length;
   }
 
-  queueRoom(parent, origin, axis, width, depth, mirror=-1) {
-    console.log(`queueRoom(parent=${parent}, origin=${origin}, axis=${axis}, width=${width}, depth=${depth}, mirror=${mirror})`);
-    this.queue.push({
+  queueRoom(parent, origin, yAxis, width, depth, mirror=-1) {  // checked
+    this.roomQueue.push({
       parent: parent,
       origin: origin,
       width: width,
       depth: depth,
-      axis: axis,
+      yAxis: yAxis,
       mirror: mirror
     });
   }
@@ -4713,9 +4727,9 @@ class MapGenerator {
     let origin = info.origin;
     let width = info.width;
     let depth = info.depth;
-    let axis = info.axis;
+    let yAxis = info.yAxis;
     let mirror = info.mirror;
-    let room = this.validateRoom(origin, axis, width, depth, mirror);
+    let room = this.validateRoom(origin, yAxis, width, depth, mirror);
     if (room != null) {
       this.addRoom(room);
       room.symm = this.symmetry.pick();
@@ -4729,12 +4743,12 @@ class MapGenerator {
         if (room.isJunction() || Random.maybe(0.5)) {
           let pos = Random.int(1, depth - 2);
           let size = this.getRoomSize();
-          let p = room.xy(-side * (width >> 1), pos);
+          let p = room.local2global(-side * (width >> 1), pos);
           let turn = -side * mirror;
-          this.queueRoom(room, p, new paper.Point(-turn * axis.y, turn * axis.x), size.width, size.height, mirror);
-          p = room.xy(side * (width >> 1), pos);
+          this.queueRoom(room, p, new paper.Point(-turn * yAxis.y, turn * yAxis.x), size.width, size.height, mirror);
+          p = room.local2global(side * (width >> 1), pos);
           turn = side * mirror;
-          this.queueRoom(room, p, new paper.Point(-turn * axis.y, turn * axis.x), size.width, size.height, -mirror);
+          this.queueRoom(room, p, new paper.Point(-turn * yAxis.y, turn * yAxis.x), size.width, size.height, -mirror);
         }
         let tmp = false;
         if (!room.isJunction()) {
@@ -4746,19 +4760,19 @@ class MapGenerator {
         }
         if (tmp) {
           let size = this.getRoomSize();
-          let p = room.xy(0, depth - 1);
-          this.queueRoom(room, p, axis, size.width, size.height, mirror);
+          let p = room.local2global(0, depth - 1);
+          this.queueRoom(room, p, yAxis, size.width, size.height, mirror);
         }
       } else {
         if (Random.maybe(0.5)) {
           let size = this.getRoomSize();
-          let p = room.xy(side * (width >> 1), Random.int(1, depth - 2));
-          this.queueRoom(room, p, new paper.Point(side * axis.y, -side * axis.x), size.width, size.height);
+          let p = room.local2global(side * (width >> 1), Random.int(1, depth - 2));
+          this.queueRoom(room, p, new paper.Point(side * yAxis.y, -side * yAxis.x), size.width, size.height);
         }
         if (Random.maybe(0.5)) {
           let size = this.getRoomSize();
-          let p = room.xy(-side * (width >> 1), Random.int(1, depth - 2));
-          this.queueRoom(room, p, new paper.Point(-side * axis.y, side * axis.x), size.width, size.height);
+          let p = room.local2global(-side * (width >> 1), Random.int(1, depth - 2));
+          this.queueRoom(room, p, new paper.Point(-side * yAxis.y, side * yAxis.x), size.width, size.height);
         }
         let tmp = false;
         if (!room.isJunction()) {
@@ -4770,25 +4784,21 @@ class MapGenerator {
         }
         if (tmp) {
           let size = this.getRoomSize();
-          let p = room.xy(Random.int(1 - (width >> 1), width >> 1), depth - 1);
-          this.queueRoom(room, p, axis, size.width, size.height);
+          let p = room.local2global(Random.int(1 - (width >> 1), width >> 1), depth - 1);
+          this.queueRoom(room, p, yAxis, size.width, size.height);
         }
       }
     }
     return room;
   }
 
-  validateRoom(origin, axis, width, depth, mirror=1) {
-    let room = new Room(origin, axis, width, depth, mirror);
-    for (let r of this.rooms) {
-      if (r.intersect(room).area > 1) {
-        return null;
-      }
+  validateRoom(origin, yAxis, width, depth, mirror=1) {  // checked
+    let room = new Room(origin, yAxis, width, depth, mirror);
+    if (this.rooms.some(r => r.intersects(room, -1))) {
+      return null;
     }
-    for (let r of this.blocks) {
-      if (room.intersects(r)) {
-        return null;
-      }
+    if (this.blocks.some(r => r.intersects(room))) {
+      return null;
     }
     return room;
   }
@@ -4948,15 +4958,15 @@ class MapGenerator {
         continue;
       }
 
-      let xy = room.xy(0, room.depth - 1);
+      let xy = room.local2global(0, room.depth - 1);
       if (this.getDoor(xy) != null) {
         continue;
       }
 
       let toCut = 0;
       while (true) {
-        let xy1 = room.xy(-1, room.depth - 2 - toCut);
-        let xy2 = room.xy(1, room.depth - 2 - toCut);
+        let xy1 = room.local2global(-1, room.depth - 2 - toCut);
+        let xy2 = room.local2global(1, room.depth - 2 - toCut);
         if (this.getDoor(xy1) != null || this.getDoor(xy2) != null) {
           break;
         }
@@ -4966,15 +4976,15 @@ class MapGenerator {
         continue;
       }
 
-      if (Dot_UP.equals(room.axis)) {
+      if (Dot_UP.equals(room.yAxis)) {
         room.top += toCut;
         room.height -= toCut;
-      } else if (Dot_LEFT.equals(room.axis)) {
+      } else if (Dot_LEFT.equals(room.yAxis)) {
         room.left += toCut;
         room.width -= toCut;
-      } else if (Dot_DOWN.equals(room.axis)) {
+      } else if (Dot_DOWN.equals(room.yAxis)) {
         room.height -= toCut;
-      } else if (Dot_RIGHT.equals(room.axis)) {
+      } else if (Dot_RIGHT.equals(room.yAxis)) {
         room.width -= toCut;
       }
       room.depth -= toCut;
