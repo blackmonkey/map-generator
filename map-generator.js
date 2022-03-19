@@ -4528,10 +4528,7 @@ class Planner {
 
 class MapGenerator {
   constructor(canvasId, opts={}, tags=[]) {
-    this.maxSize = 15;
-    this.minSize = 6;
     this.style = [0, 0, 0, 1, 2, 3, 3];
-    this.order = [true, true, true, true, false];
     this.rooms = [];
     this.doors = [];
     this.blocks = [];
@@ -4629,18 +4626,19 @@ class MapGenerator {
   }
 
   build() {
+    let minNormalRooms; // <= com_watabou_dungeon_model_Dungeon.minSize
+    let maxNormalRooms; // <= com_watabou_dungeon_model_Dungeon.maxSize
     if (this.tags.includes('small')) {
-      this.minSize = 3; // TODO: rename to minRoomCount
-      this.maxSize = 6; // TODO: rename to maxRoomCount
+      minNormalRooms = 3;
+      maxNormalRooms = 6;
     } else if (this.tags.includes('large')) {
-      this.minSize = 12;
-      this.maxSize = 25;
+      minNormalRooms = 12;
+      maxNormalRooms = 25;
+    } else {
+      minNormalRooms = 6;
+      maxNormalRooms = 15;
     }
-    if (this.tags.includes('chaotic')) {
-      this.order = [false];
-    } else if (this.tags.includes('ordered')) {
-      this.order = [true, true, true, true, true, true, false];
-    }
+
     if (this.tags.includes('cramped')) {
       this.style = [0, 0, 0, 2, 3, 3];
     } else if (this.tags.includes('spacious')) {
@@ -4650,22 +4648,32 @@ class MapGenerator {
     } else if (this.tags.includes('compact')) {
       this.style = [0, 0, 0, 1];
     }
-    this.symmetry = new Deck(this.order);
+
+    let order;
+    if (this.tags.includes('chaotic')) {
+      order = [false];
+    } else if (this.tags.includes('ordered')) {
+      order = [true, true, true, true, true, true, false];
+    } else {
+      order = [true, true, true, true, false];
+    }
+    this.symmetry = new Deck(order);
+
     let iterCount = 0;
     while (iterCount < 500) { // FIXME: replace this condition to `true`
       this.rooms = [];
       this.doors = [];
       this.blocks = [];
-      this.queue = [];
+      this.roomQueue = []; // <= com_watabou_dungeon_model_Dungeon.queue
       let size = this.getRoomSize();
       let yAxis = Random.choose([Dot_UP, Dot_DOWN, Dot_LEFT, Dot_RIGHT]);
       this.queueRoom(null, new paper.Point(0, 0), yAxis, size.width, size.height);
-      while (this.queue.length > 0 && this.getSize() < this.maxSize && iterCount < 500) { // FIXME: remove condition `this.rooms.length < 100`
+      while (this.roomQueue.length > 0 && this.getNormalRoomCount() < maxNormalRooms && iterCount < 500) { // FIXME: remove condition `iterCount < 500`
         this.buildRoom();
         iterCount++;
       }
       iterCount++;
-      if (this.getSize() >= this.minSize) {
+      if (this.getNormalRoomCount() >= minNormalRooms) {
         break;
       }
     }
@@ -4706,8 +4714,10 @@ class MapGenerator {
     return size;
   }
 
-  getSize() { // TODO: rename to getNormalRoomCount
-    return this.rooms.filter(room => room.isNormal()).length;
+  getNormalRoomCount() { // checked <= com_watabou_dungeon_model_Dungeon.getSize()
+    let count = 0;
+    this.rooms.forEach(room => count += room.isNormal());
+    return count;
   }
 
   queueRoom(parent, origin, yAxis, width, depth, mirror=-1) {  // checked
@@ -4722,7 +4732,7 @@ class MapGenerator {
   }
 
   buildRoom() {
-    let info = this.queue.shift();
+    let info = this.roomQueue.shift();
     let parent = info.parent;
     let origin = info.origin;
     let width = info.width;
