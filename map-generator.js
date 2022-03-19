@@ -3188,7 +3188,7 @@ class Room extends paper.Rectangle {
           this.props.push(new Dais(this.dungeon.config).place(this.aisle(), Utils.axis2angle(this.yAxis)));
         }
       } else {
-        let pos = this.round ? this.center() : this.aisle();
+        let pos = this.round ? this.center : this.aisle();
         let drawing = this.round ? new SmallDais(this.dungeon.config) : new Dais(this.dungeon.config);
         let rotation = Utils.axis2angle(this.yAxis);
         this.props.push(drawing.place(pos, rotation));
@@ -3273,7 +3273,7 @@ class Room extends paper.Rectangle {
 
   addFountain() {
     let size = Math.sqrt((Math.min(this.width, this.height) - 2) / 3) * 1.5;
-    let inst = new Fountain(this.dungeon.config).place(this.center(), 0, size);
+    let inst = new Fountain(this.dungeon.config).place(this.center, 0, size);
     this.props.push(inst);
     return inst;
   }
@@ -3566,7 +3566,7 @@ class Room extends paper.Rectangle {
       let n = Math.floor(Math.PI * R / 2) * 4;
       for (let i = 0; i < n; i++) {
         let a = (i + 0.5) / n * 360;
-        let p = new paper.Point({length:R, angle:a}).add(inner.center());
+        let p = new paper.Point({length:R, angle:a}).add(inner.center);
         this.drawColumn(layer, p.multiply(30), a);
       }
     } else if (this.yAxis.x != 0) {
