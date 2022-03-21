@@ -969,6 +969,17 @@ class Utils {
   static interpolate(a, b, w) {
     return a + (b - a) * w;
   }
+
+  /**
+   * Align the specific value to closed integer.
+   * @param {number} val the value to align.
+   * @return {number} the closed integer.
+   */
+  static snapInt(val) {
+    let floor = Math.floor(val), ceil = Math.ceil(val);
+    let floorError = Math.abs(val - floor), ceilError = Math.abs(val - ceil);
+    return floorError <= ceilError ? floor : ceil;
+  }
 }
 
 
@@ -2133,7 +2144,7 @@ class Shading {
         let rate = (i - strokeHalfWidth) / strokeHalfWidth;
         let v0 = dir.rotate(90).multiply(rate).add(point);
         let ends = [];
-        let d0 = dir.rotate(180);
+        let d0 = dir.negate();
         let minLen = 1.5;
         for (let n of neighbours) {
           let segs = clusters.get(n);
@@ -2876,11 +2887,12 @@ class Room extends paper.Rectangle {
    *
    * @param {number} px the inner x coordinate of the point.
    * @param {number} py the inner y coordinate of the point.
-   * @return {paper.Point} the corresponding coordinates in global canvas.
+   * @return {paper.Point} the corresponding coordinates in global canvas, whose coordinates value
+   * are integer.
    */
   local2global(px, py) {
     // during projection:
-    return new paper.Point(
+    let res = new paper.Point(
         px * this.mirror, // flip the x.
         -py               // the room's inner y axis is up, while global canvas's y axis is down.
       )
@@ -2891,6 +2903,7 @@ class Room extends paper.Rectangle {
       .rotate(90 - Utils.axis2angle(this.yAxis))
       // then move vector (px, py) according to room's origin
       .add(this.origin);
+    return new paper.Point(Utils.snapInt(res.x), Utils.snapInt(res.y));
   }
 
   /**
@@ -3567,10 +3580,7 @@ class Door extends paper.Point {
     if (from != null) {
       this.dir = from.out(this);
     } else if (to != null) {
-      let o = to.out(this);
-      if (o != null) {
-        this.dir = o.rotate(180);
-      }
+      this.dir = to.out(this).negate();
     }
     if (this.dir == null) {
       console.error(`Failed to set Door.dir when pos=${pos}, from=${from}, to=${to}`);
@@ -4675,12 +4685,12 @@ class MapGenerator {
       let side = Random.maybe(0.5) ? 1 : -1;
       if (symmRoom) {
         if (room.isJunction() || Random.maybe(0.5)) {
-          let pos = Random.int(1, depth - 2);
+          let y = Random.int(1, depth - 2);
           let size = this.getRoomSize();
-          let p = room.local2global(-side * w2, pos);
+          let p = room.local2global(-side * w2, y);
           let turn = -side * mirror;
           this.queueRoom(room, p, new paper.Point(-turn * yAxis.y, turn * yAxis.x), size, mirror);
-          p = room.local2global(side * w2, pos);
+          p = room.local2global(side * w2, y);
           this.queueRoom(room, p, new paper.Point(turn * yAxis.y, -turn * yAxis.x), size, -mirror);
         }
         if (!room.isJunction() && (room.isCorridor() || Random.maybe(0.1))) {
@@ -5121,7 +5131,7 @@ class MapGenerator {
     let a = new paper.Point({length: 30 * this.config.style.shadowDist, angle: 45 - this.config.rotation});
     this.shadow.position = a;
     if (this.shadow.clipped) {
-      this.shadow.firstChild.position = a.rotate(180);
+      this.shadow.firstChild.position = a.negate();
     }
   }
 
