@@ -772,7 +772,7 @@ class Random {
     if (items === undefined || items === null || items.length == 0) {
       return undefined;
     }
-    let idx = Random.int(items.length - 1);
+    let idx = Random.int(items.length);
     if (remove) {
       return items.splice(idx, 1)[0];
     }
