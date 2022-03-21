@@ -1545,47 +1545,30 @@ class Tags {
 
 class Deck {
   /**
-   * @param {number[]}} cards
+   * Constructor a shuffling machine
+   * @param {number[]}} cards the cards to be shuffled
+   * @return {Deck} the shuffling machine instance
    */
   constructor(cards) {
     this.cards = Utils.shuffle(cards);
     this.pile = [];
-    this._round = 0;
   }
 
-  draw() {
+  /**
+   * Pick a card from the shuffling machine.
+   * @return {any} the picked card.
+   */
+  pick() {
     if (this.cards.length == 0) {
       if (this.pile.length == 0) {
         return null;
       }
       this.cards = Utils.shuffle(this.pile);
       this.pile = [];
-      this._round++;
     }
-    return this.cards.pop();
-  }
-
-  discard(card) {
+    let card = this.cards.pop();
     this.pile.push(card);
     return card;
-  }
-
-  putOnTop(card) {
-    this.cards.push(card);
-    return card;
-  }
-
-  shuffle(card) {
-    this.cards.splice(Random.int(this.cards.length + 1), 0, card);
-    return card;
-  }
-
-  pick() {
-    return this.discard(this.draw());
-  }
-
-  get_round() {
-    return this._round;
   }
 }
 
