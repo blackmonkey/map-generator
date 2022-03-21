@@ -3049,8 +3049,7 @@ class Room extends paper.Rectangle {
       nRubble += 3;
     }
     while (nRubble-- > 0) {
-      let f = Random.float();
-      let size = 0.1 + (crumbling ? 0.6 : 0.4) * (f * f * f);
+      let size = 0.1 + (crumbling ? 0.6 : 0.4) * Random.pow(3);
       let p = this.scatter(size);
       this.props.push(new Boulder(this.dungeon.config).place(p, Random.float(180), size));
     }
@@ -3074,18 +3073,16 @@ class Room extends paper.Rectangle {
       } else if (this.desc == null && Random.maybe(this.dungeon.config.wellChance * (this.round ? 2 : 1))) {
         this.dungeon.config.wellChance = 0;
         this.props.push(new Well(this.dungeon.config).place(this.center));
-      } else {
-        if (Random.maybe(1/3)) {
-          let n = Random.float(area / 5);
-          if (Random.maybe(2/3)) {
-            while (n-- > 0) {
-              this.addCrate();
-            }
-          } else {
-            let size = 0.6 + 0.4 * Random.times(3);
-            while (n-- > 0) {
-              this.addBarrel(size);
-            }
+      } else if (Random.maybe(1/3)) {
+        let n = Random.float(area / 5);
+        if (Random.maybe(2/3)) {
+          while (n-- > 0) {
+            this.addCrate();
+          }
+        } else {
+          let size = 0.6 + 0.4 * Random.times(3);
+          while (n-- > 0) {
+            this.addBarrel(size);
           }
         }
       }
@@ -3191,7 +3188,7 @@ class Room extends paper.Rectangle {
   }
 
   addFountain() {
-    let size = Math.sqrt((Math.min(this.width, this.height) - 2) / 3) * 1.5;
+    let size = Math.sqrt(Math.min(this.inner.width, this.inner.height) / 3) * 1.5;
     let inst = new Fountain(this.dungeon.config).place(this.center, 0, size);
     this.props.push(inst);
     return inst;
@@ -4661,14 +4658,14 @@ class MapGenerator {
     let room = this.validateRoom(origin, yAxis, width, depth, mirror);
     if (room != null) {
       this.addRoom(room);
-      room.symm = this.symmetry.pick();
+      let symmRoom = this.symmetry.pick();
       let door = new Door(origin, parent, room);
       this.addDoor(door);
       if (parent == null) {
         this.blocks.push(new paper.Rectangle(door.x - 1, door.y - 1, 3, 3));
       }
       let side = Random.maybe(0.5) ? 1 : -1;
-      if (room.symm) {
+      if (symmRoom) {
         if (room.isJunction() || Random.maybe(0.5)) {
           let pos = Random.int(1, depth - 2);
           let size = this.getRoomSize();
@@ -4726,7 +4723,7 @@ class MapGenerator {
     if (this.rooms.some(r => r.intersects(room, -1))) {
       return null;
     }
-    if (this.blocks.some(r => r.intersects(room))) {
+    if (this.doorBlocks.some(r => r.intersects(room))) {
       return null;
     }
     return room;
