@@ -2256,8 +2256,8 @@ class Shading {
         }
         for (let stone of stonework) {
           let width = config.style.hatchingSize * (overlapping ? 1 + Math.abs(Random.times(4) * 2 - 1) : 1);
-          let depth = config.style.hatchingDistance * Random.times(3) * 2;
-          let poly = stone.hor ? Poly.rect(depth, width) : Poly.rect(width, depth);
+          let height = config.style.hatchingDistance * Random.times(3) * 2;
+          let poly = stone.hor ? Poly.rect(height, width) : Poly.rect(width, height);
           Poly.asTranslate(poly, stone);
           layer.addChild(new paper.Path({
             segments: poly,
@@ -2291,12 +2291,12 @@ class Shading {
         }
         for (let stone of stonework) {
           let width = step * (overlapping ? 1 + Math.abs(Random.times(4) * 2 - 1) : 1) / 2;
-          let depth = config.style.hatchingDistance * Random.times(3);
+          let height = config.style.hatchingDistance * Random.times(3);
           let poly = [
-            new paper.Point({length: r + depth, angleInRadians: stone - width}),
-            new paper.Point({length: r + depth, angleInRadians: stone + width}),
-            new paper.Point({length: r - depth, angleInRadians: stone + width}),
-            new paper.Point({length: r - depth, angleInRadians: stone - width})
+            new paper.Point({length: r + height, angleInRadians: stone - width}),
+            new paper.Point({length: r + height, angleInRadians: stone + width}),
+            new paper.Point({length: r - height, angleInRadians: stone + width}),
+            new paper.Point({length: r - height, angleInRadians: stone - width})
           ];
           Poly.asTranslate(poly, circle.center);
           layer.addChild(new paper.Path({
@@ -2733,29 +2733,28 @@ class Room extends paper.Rectangle {
    * Construct a Room instance.
    * @param {paper.Point} origin
    * @param {paper.Point} yAxis
-   * @param {number} width the width of this room.
-   * @param {number} depth the height of this room.
+   * @param {paper.Size} size the size of the room in its own coordinate system.
    * @param {number} mirror
    * @return {Room} this Room instance.
    */
-  constructor(origin, yAxis, width, depth, mirror=1) {
-    let tl = new paper.Point(), sz = new paper.Size();
+  constructor(origin, yAxis, size, mirror=1) {
+    let tl = new paper.Point(), sz = new paper.Size(), w2 = size.width >> 1;
     if (Dot_UP.equals(yAxis)) {
-      tl.set(origin.x - (width >> 1), origin.y - depth + 1);
-      sz.set(width, depth);
+      tl.set(origin.x - w2, origin.y - size.height + 1);
+      sz.set(size);
     } else if (Dot_DOWN.equals(yAxis)) {
-      tl.set(origin.x - (width >> 1), origin.y);
-      sz.set(width, depth);
+      tl.set(origin.x - w2, origin.y);
+      sz.set(size);
     } else if (Dot_LEFT.equals(yAxis)) {
-      tl.set(origin.x - depth + 1, origin.y - (width >> 1));
-      sz.set(depth, width);
+      tl.set(origin.x - size.height + 1, origin.y - w2);
+      sz.set(size.height, size.width);
     } else if (Dot_RIGHT.equals(yAxis)) {
-      tl.set(origin.x, origin.y - (width >> 1));
-      sz.set(depth, width);
+      tl.set(origin.x, origin.y - w2);
+      sz.set(size.height, size.width);
     } else {
-      console.warn(`Unknown axis: Room(origin=${origin}, y-axis=${yAxis}, width=${width}, depth=${depth}, mirror=${mirror})`);
+      console.warn(`Unknown axis: Room(origin=${origin}, y-axis=${yAxis}, size=${size}, mirror=${mirror})`);
       tl.set(origin.x, 0);
-      sz.set(width, 0);
+      sz.set(size.width, 0);
     }
     super(tl, sz);
     this.hidden = false;
@@ -2773,8 +2772,8 @@ class Room extends paper.Rectangle {
     this.yAxis = yAxis;
     this.mirror = mirror;
     this.props = [];
-    this.width = width;
-    this.depth = depth;
+    this.oWidth = size.width; // the room's width in its own coordinate system.
+    this.oHeight = size.height; // the room's height in its own coordinate system.
     this.inner = this.expand(-2);
   }
 
@@ -3022,7 +3021,7 @@ class Room extends paper.Rectangle {
    * @return {boolean}
    */
   aisleAvailable() {
-    let door = this.dungeon.getDoor(this.local2global(0, this.depth - 1));
+    let door = this.dungeon.getDoor(this.local2global(0, this.oHeight - 1));
     return door == null || door.type == Door.SECRET;
   }
 
@@ -3051,7 +3050,7 @@ class Room extends paper.Rectangle {
    * @return {paper.Point}
    */
   aisle() {
-    return this.local2global(0, this.depth - 2).add(0.5);
+    return this.local2global(0, this.oHeight - 2).add(0.5);
   }
 
   createProps() {
@@ -3100,14 +3099,14 @@ class Room extends paper.Rectangle {
         }
       }
       if (!this.round) {
-        let door = this.dungeon.getDoor(this.local2global(0, this.depth - 1));
-        if ((door != null && door.type == Door.SECRET) || (door == null && Random.maybe(this.dungeon.config.tapestryChance / this.width))) {
+        let door = this.dungeon.getDoor(this.local2global(0, this.oHeight - 1));
+        if ((door != null && door.type == Door.SECRET) || (door == null && Random.maybe(this.dungeon.config.tapestryChance / this.oWidth))) {
           this.addTapestry();
         }
       }
     }
     if (this.equals(this.dungeon.planner.last)) {
-      if (this.width <= 5) {
+      if (this.oWidth <= 5) {
         this.columns = false;
       }
       if (this.dungeon.tags.includes('multi-level')) {
@@ -3139,7 +3138,7 @@ class Room extends paper.Rectangle {
   }
 
   addTapestry() {
-    let inst = new Tapestry(this.width - 2, this.dungeon.config);
+    let inst = new Tapestry(this.oWidth - 2, this.dungeon.config);
     inst.place(this.aisle(), Utils.axis2angle(-this.yAxis.y, this.yAxis.x));
     this.props.push(inst);
     return inst;
@@ -3211,11 +3210,11 @@ class Room extends paper.Rectangle {
     if (this.width != this.height || this.width <= 3) {
       return false;
     }
-    let w2 = this.width >> 1, d2 = this.depth >> 1;
+    let w2 = this.oWidth >> 1, d2 = this.oHeight >> 1;
     let a = this.local2global(0, 0);
     let b = this.local2global(-w2, d2);
     let c = this.local2global(w2, d2);
-    let d = this.local2global(0, this.depth - 1);
+    let d = this.local2global(0, this.oHeight - 1);
     return this.getDoors().every(door => a.equals(door) || b.equals(door) || c.equals(door) || d.equals(door));
   }
 
@@ -3317,8 +3316,8 @@ class Room extends paper.Rectangle {
    * @param {paper.Layer} layer
    */
   drawCracks(layer) {
-    let r = this.round ? Math.sqrt(Math.pow(this.width - 2, 2) + 1) / 2 : 0;
-    let p = this.round ? Math.PI * r : 2 * (this.width + this.depth - 4);
+    let r = this.round ? Math.sqrt(Math.pow(this.oWidth - 2, 2) + 1) / 2 : 0;
+    let p = this.round ? Math.PI * r : 2 * (this.oWidth + this.oHeight - 4);
     let n = p * Random.times(3) * this.dungeon.config.crackChance;
     for (let i = 0; i < n; i++) {
       let pos = this.center.clone();
@@ -3333,18 +3332,18 @@ class Room extends paper.Rectangle {
         switch (Random.int(3)) {
           case 0:
             p = this.yAxis;
-            a = this.depth;
-            b = this.width;
+            a = this.oHeight;
+            b = this.oWidth;
             break;
           case 1:
             p = this.yAxis.rotate(90);
-            a = this.width;
-            b = this.depth;
+            a = this.oWidth;
+            b = this.oHeight;
             break;
           case 2:
             p = this.yAxis.rotate(-90);
-            a = this.width;
-            b = this.depth;
+            a = this.oWidth;
+            b = this.oHeight;
             break;
         }
         if (this.isSolid(p)) {
@@ -4608,7 +4607,7 @@ class MapGenerator {
     this.planner.plan();
     if (this.tags.includes('multi-level')) {
       let last = this.planner.last;
-      let exit = new Door(last.local2global(0, last.depth - 1), last, null);
+      let exit = new Door(last.local2global(0, last.oHeight - 1), last, null);
       this.doors.push(exit);
     }
     while (this.createLoop() > 0) {}
@@ -4657,8 +4656,7 @@ class MapGenerator {
     this.roomQueue.push({
       parent: parent,
       origin: origin,
-      width: size.width,
-      depth: size.height,
+      size: size,
       yAxis: yAxis,
       mirror: mirror
     });
@@ -4668,12 +4666,10 @@ class MapGenerator {
     let info = this.roomQueue.shift();
     let parent = info.parent;
     let origin = info.origin;
-    let width = info.width;
-    let depth = info.depth;
     let yAxis = info.yAxis;
     let mirror = info.mirror;
-    let w2 = width >> 1;
-    let room = this.validateRoom(origin, yAxis, width, depth, mirror);
+    let w2 = info.size.width >> 1;
+    let room = this.validateRoom(origin, yAxis, info.size, mirror);
     if (room != null) {
       this.addRoom(room);
       let symmRoom = this.symmetry.pick();
@@ -4685,7 +4681,7 @@ class MapGenerator {
       let side = Random.maybe(0.5) ? 1 : -1;
       if (symmRoom) {
         if (room.isJunction() || Random.maybe(0.5)) {
-          let y = Random.int(1, depth - 2);
+          let y = Random.int(1, room.oHeight - 2);
           let size = this.getRoomSize();
           let p = room.local2global(-side * w2, y);
           let turn = -side * mirror;
@@ -4694,20 +4690,20 @@ class MapGenerator {
           this.queueRoom(room, p, new paper.Point(turn * yAxis.y, -turn * yAxis.x), size, -mirror);
         }
         if (!room.isJunction() && (room.isCorridor() || Random.maybe(0.1))) {
-          let p = room.local2global(0, depth - 1);
+          let p = room.local2global(0, room.oHeight - 1);
           this.queueRoom(room, p, yAxis, this.getRoomSize(), mirror);
         }
       } else {
         if (Random.maybe(0.5)) {
-          let p = room.local2global(side * w2, Random.int(1, depth - 2));
+          let p = room.local2global(side * w2, Random.int(1, room.oHeight - 2));
           this.queueRoom(room, p, new paper.Point(side * yAxis.y, -side * yAxis.x), this.getRoomSize());
         }
         if (Random.maybe(0.5)) {
-          let p = room.local2global(-side * w2, Random.int(1, depth - 2));
+          let p = room.local2global(-side * w2, Random.int(1, room.oHeight - 2));
           this.queueRoom(room, p, new paper.Point(-side * yAxis.y, side * yAxis.x), this.getRoomSize());
         }
         if (!room.isJunction() && (room.isCorridor() || Random.maybe(0.1))) {
-          let p = room.local2global(Random.int(1 - w2, w2), depth - 1);
+          let p = room.local2global(Random.int(1 - w2, w2), room.oHeight - 1);
           this.queueRoom(room, p, yAxis, this.getRoomSize());
         }
       }
@@ -4715,8 +4711,15 @@ class MapGenerator {
     return room;
   }
 
-  validateRoom(origin, yAxis, width, depth, mirror=1) {  // checked
-    let room = new Room(origin, yAxis, width, depth, mirror);
+  /**
+   * @param {paper.Point} origin
+   * @param {paper.Point} yAxis
+   * @param {paper.Size} size
+   * @param {number} mirror
+   * @return {Room}
+   */
+  validateRoom(origin, yAxis, size, mirror=1) {  // checked
+    let room = new Room(origin, yAxis, size, mirror);
     if (this.rooms.some(r => r.intersects(room, -1))) {
       return null;
     }
@@ -4763,16 +4766,19 @@ class MapGenerator {
 
   grow() {
     for (let r1 of this.rooms) {
-      if ((r1.width > 3 && Random.maybe(r1.depth / r1.width)) || r1.depth >= 10) {
+      if ((r1.oWidth > 3 && Random.maybe(r1.oHeight / r1.oWidth)) || r1.oHeight >= 10) {
         continue;
       }
 
       let grown = r1.getGrown();
       let overlaps = false;
       for (let r2 of this.rooms) {
-        if (!r2.equals(r1) && r2.intersect(grown).area > 1) {
-          overlaps = true;
-          break;
+        if (!r2.equals(r1)) {
+          let i = r2.intersect(grown);
+          if (i.width > 1 && i.height > 1) {
+            overlaps = true;
+            break;
+          }
         }
       }
       if (!overlaps) {
@@ -4785,7 +4791,7 @@ class MapGenerator {
       }
       if (!overlaps) {
         r1.set(grown);
-        r1.depth++;
+        r1.oHeight++;
       }
     }
   }
@@ -4881,22 +4887,22 @@ class MapGenerator {
         continue;
       }
 
-      let xy = room.local2global(0, room.depth - 1);
+      let xy = room.local2global(0, room.oHeight - 1);
       if (this.getDoor(xy) != null) {
         continue;
       }
 
       console.log('Looking for a expected door...');
       let toCut = 0, foundDoor = false;
-      for (toCut = 0; toCut < room.depth && !foundDoor; toCut++) { // TODO: Check why the original condition is `while(true)`
-        let xy1 = room.local2global(-1, room.depth - 2 - toCut);
-        let xy2 = room.local2global(1, room.depth - 2 - toCut);
+      for (toCut = 0; toCut < room.oHeight && !foundDoor; toCut++) { // TODO: Check why the original condition is `while(true)`
+        let xy1 = room.local2global(-1, room.oHeight - 2 - toCut);
+        let xy2 = room.local2global(1, room.oHeight - 2 - toCut);
         foundDoor = this.getDoor(xy1) != null || this.getDoor(xy2) != null;
       }
       if (toCut <= 0) {
         continue;
       }
-      if (toCut >= room.depth) {
+      if (toCut >= room.oHeight) {
         console.warn("Couldn't find a neighbored door.");
         continue;
       }
@@ -4919,7 +4925,7 @@ class MapGenerator {
         room.width -= toCut;
       }
       // shrink the room's height in its own coordinate system.
-      room.depth -= toCut;
+      room.oHeight -= toCut;
     }
   }
 
@@ -4932,9 +4938,9 @@ class MapGenerator {
         }
       }
       if (room.isNormal()) {
-        let kSize = 0.7 * (room.depth - 4) / room.depth + 0.3 * (room.width - 4) / room.width;
-        let kShape = room.round ? 1 : 1.2 - room.width / room.depth;
-        if (room.width == 5) {
+        let kSize = 0.7 * (room.oHeight - 4) / room.oHeight + 0.3 * (room.oWidth - 4) / room.oWidth;
+        let kShape = room.round ? 1 : 1.2 - room.oWidth / room.oHeight;
+        if (room.oWidth == 5) {
           kSize /= 2;
         }
         if (Random.maybe(kSize * kShape * this.config.colonnadeChance)) {
