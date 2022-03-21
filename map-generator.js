@@ -2822,17 +2822,17 @@ class Room extends paper.Rectangle {
    * @return {string}
    */
   word() {
-    if (this.isNormal()) {
-      let innerArea = this.inner.area;
-      if (innerArea >= 21) {
-        return Random.choose(['large room', 'large chamber', 'hall']);
-      }
-      if (innerArea >= 15) {
-        return Random.choose(['room', 'chamber']);
-      }
-      return Random.choose(['small room', 'small chamber']);
+    if (!this.isNormal()) {
+      return Random.choose(['corridor', 'passage']);
     }
-    return Random.choose(['corridor', 'passage']);
+    let innerArea = this.inner.area;
+    if (innerArea >= 21) {
+      return Random.choose(['large room', 'large chamber', 'hall']);
+    }
+    if (innerArea >= 15) {
+      return Random.choose(['room', 'chamber']);
+    }
+    return Random.choose(['small room', 'small chamber']);
   }
 
   /**
