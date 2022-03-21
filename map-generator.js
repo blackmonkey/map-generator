@@ -1053,79 +1053,15 @@ class PerlinNoise {
     let ab = this.p[this.p[j1] + i0];
     let ba = this.p[this.p[j0] + i1];
     let bb = this.p[this.p[j1] + i1];
-    let v0;
-    switch (aa & 3) {
-      case 0:
-        v0 = fx + fy;
-        break;
-      case 1:
-        v0 = fx - fy;
-        break;
-      case 2:
-        v0 = -fx + fy;
-        break;
-      case 3:
-        v0 = -fx - fy;
-        break;
-      default:
-        v0 = 0;
-    }
+    let v0 = this.dot(aa, fx, fy);
     let x1 = fx - 1;
-    let v1;
-    switch (ab & 3) {
-      case 0:
-        v1 = x1 + fy;
-        break;
-      case 1:
-        v1 = x1 - fy;
-        break;
-      case 2:
-        v1 = -x1 + fy;
-        break;
-      case 3:
-        v1 = -x1 - fy;
-        break;
-      default:
-        v1 = 0;
-    }
+    let v1 = this.dot(ab, x1, fy);
     let val0 = Utils.interpolate(v0, v1, wx);
     let y1 = fy - 1;
-    let v01;
-    switch (ba & 3) {
-      case 0:
-        v01 = fx + y1;
-        break;
-      case 1:
-        v01 = fx - y1;
-        break;
-      case 2:
-        v01 = -fx + y1;
-        break;
-      case 3:
-        v01 = -fx - y1;
-        break;
-      default:
-        v01 = 0;
-    }
+    let v01 = this.dot(ba, fx, y1);
     let x2 = fx - 1;
     let y2 = fy - 1;
-    let v11;
-    switch (bb & 3) {
-      case 0:
-        v11 = x2 + y2;
-        break;
-      case 1:
-        v11 = x2 - y2;
-        break;
-      case 2:
-        v11 = -x2 + y2;
-        break;
-      case 3:
-        v11 = -x2 - y2;
-        break;
-      default:
-        v11 = 0;
-    }
+    let v11 = this.dot(bb, x2, y2);
     let val1 = Utils.interpolate(v01, v11, wx);
     return Utils.interpolate(val0, val1, wy);
   }
