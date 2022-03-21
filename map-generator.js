@@ -2849,10 +2849,10 @@ class Room extends paper.Rectangle {
       }
     } else {
       poly = [
-        this.topLeft,
-        this.topRight,
-        this.bottomRight,
-        this.bottomLeft
+        this.inner.topLeft,
+        this.inner.topRight,
+        this.inner.bottomRight,
+        this.inner.bottomLeft
       ];
     }
     return poly;
