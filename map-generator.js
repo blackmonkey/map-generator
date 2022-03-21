@@ -4447,7 +4447,7 @@ class MapGenerator {
     this.style = [0, 0, 0, 1, 2, 3, 3];
     this.rooms = [];
     this.doors = [];
-    this.blocks = [];
+    this.doorBlocks = [];
     this.planner = null;
 
     this.config = Object.assign({
@@ -4579,7 +4579,7 @@ class MapGenerator {
     while (iterCount < 500) { // FIXME: replace this condition to `true`
       this.rooms = [];
       this.doors = [];
-      this.blocks = [];
+      this.doorBlocks = [];
       this.roomQueue = []; // <= com_watabou_dungeon_model_Dungeon.queue
       let size = this.getRoomSize();
       let yAxis = Random.choose([Dot_UP, Dot_DOWN, Dot_LEFT, Dot_RIGHT]);
@@ -4662,7 +4662,7 @@ class MapGenerator {
       let door = new Door(origin, parent, room);
       this.addDoor(door);
       if (parent == null) {
-        this.blocks.push(new paper.Rectangle(door.x - 1, door.y - 1, 3, 3));
+        this.doorBlocks.push(new paper.Rectangle(door.x - 1, door.y - 1, 3, 3));
       }
       let side = Random.maybe(0.5) ? 1 : -1;
       if (symmRoom) {
@@ -4779,7 +4779,7 @@ class MapGenerator {
         }
       }
       if (!overlaps) {
-        for (let block of this.blocks) {
+        for (let block of this.doorBlocks) {
           if (block.intersects(grown)) {
             overlaps = true;
             break;
