@@ -2764,7 +2764,7 @@ class Room extends paper.Rectangle {
     this.props = [];
     this.width = width;
     this.depth = depth;
-    this.inner = this.expand(-1);
+    this.inner = this.expand(-2);
   }
 
   /**
@@ -4665,7 +4665,7 @@ class MapGenerator {
       let door = new Door(origin, parent, room);
       this.addDoor(door);
       if (parent == null) {
-        this.blocks.push(new paper.Rectangle(door.x, door.y, 1, 1).expand(1));
+        this.blocks.push(new paper.Rectangle(door.x - 1, door.y - 1, 3, 3));
       }
       let side = Random.maybe(0.5) ? 1 : -1;
       if (room.symm) {
