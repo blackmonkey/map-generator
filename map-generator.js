@@ -4583,7 +4583,7 @@ class MapGenerator {
       this.roomQueue = []; // <= com_watabou_dungeon_model_Dungeon.queue
       let size = this.getRoomSize();
       let yAxis = Random.choose([Dot_UP, Dot_DOWN, Dot_LEFT, Dot_RIGHT]);
-      this.queueRoom(null, new paper.Point(0, 0), yAxis, size.width, size.height);
+      this.queueRoom(null, new paper.Point(0, 0), yAxis, size);
       while (this.roomQueue.length > 0 && this.getNormalRoomCount() < maxNormalRooms && iterCount < 500) { // FIXME: remove condition `iterCount < 500`
         this.buildRoom();
         iterCount++;
@@ -4636,12 +4636,19 @@ class MapGenerator {
     return count;
   }
 
-  queueRoom(parent, origin, yAxis, width, depth, mirror=-1) {  // checked
+  /**
+   * @param {Room} parent
+   * @param {paper.Point} origin
+   * @param {paper.Point} yAxis
+   * @param {paper.Size} size
+   * @param {number} mirror
+   */
+  queueRoom(parent, origin, yAxis, size, mirror=-1) {  // checked
     this.roomQueue.push({
       parent: parent,
       origin: origin,
-      width: width,
-      depth: depth,
+      width: size.width,
+      depth: size.height,
       yAxis: yAxis,
       mirror: mirror
     });
@@ -4655,6 +4662,7 @@ class MapGenerator {
     let depth = info.depth;
     let yAxis = info.yAxis;
     let mirror = info.mirror;
+    let w2 = width >> 1;
     let room = this.validateRoom(origin, yAxis, width, depth, mirror);
     if (room != null) {
       this.addRoom(room);
@@ -4669,49 +4677,28 @@ class MapGenerator {
         if (room.isJunction() || Random.maybe(0.5)) {
           let pos = Random.int(1, depth - 2);
           let size = this.getRoomSize();
-          let p = room.local2global(-side * (width >> 1), pos);
+          let p = room.local2global(-side * w2, pos);
           let turn = -side * mirror;
-          this.queueRoom(room, p, new paper.Point(-turn * yAxis.y, turn * yAxis.x), size.width, size.height, mirror);
-          p = room.local2global(side * (width >> 1), pos);
-          turn = side * mirror;
-          this.queueRoom(room, p, new paper.Point(-turn * yAxis.y, turn * yAxis.x), size.width, size.height, -mirror);
+          this.queueRoom(room, p, new paper.Point(-turn * yAxis.y, turn * yAxis.x), size, mirror);
+          p = room.local2global(side * w2, pos);
+          this.queueRoom(room, p, new paper.Point(turn * yAxis.y, -turn * yAxis.x), size, -mirror);
         }
-        let tmp = false;
-        if (!room.isJunction()) {
-          if (!room.isCorridor()) {
-            tmp = Random.maybe(0.1);
-          } else {
-            tmp = true;
-          }
-        }
-        if (tmp) {
-          let size = this.getRoomSize();
+        if (!room.isJunction() && (room.isCorridor() || Random.maybe(0.1))) {
           let p = room.local2global(0, depth - 1);
-          this.queueRoom(room, p, yAxis, size.width, size.height, mirror);
+          this.queueRoom(room, p, yAxis, this.getRoomSize(), mirror);
         }
       } else {
         if (Random.maybe(0.5)) {
-          let size = this.getRoomSize();
-          let p = room.local2global(side * (width >> 1), Random.int(1, depth - 2));
-          this.queueRoom(room, p, new paper.Point(side * yAxis.y, -side * yAxis.x), size.width, size.height);
+          let p = room.local2global(side * w2, Random.int(1, depth - 2));
+          this.queueRoom(room, p, new paper.Point(side * yAxis.y, -side * yAxis.x), this.getRoomSize());
         }
         if (Random.maybe(0.5)) {
-          let size = this.getRoomSize();
-          let p = room.local2global(-side * (width >> 1), Random.int(1, depth - 2));
-          this.queueRoom(room, p, new paper.Point(-side * yAxis.y, side * yAxis.x), size.width, size.height);
+          let p = room.local2global(-side * w2, Random.int(1, depth - 2));
+          this.queueRoom(room, p, new paper.Point(-side * yAxis.y, side * yAxis.x), this.getRoomSize());
         }
-        let tmp = false;
-        if (!room.isJunction()) {
-          if (!room.isCorridor()) {
-            tmp = Random.maybe(0.1);
-          } else {
-            tmp = true;
-          }
-        }
-        if (tmp) {
-          let size = this.getRoomSize();
-          let p = room.local2global(Random.int(1 - (width >> 1), width >> 1), depth - 1);
-          this.queueRoom(room, p, yAxis, size.width, size.height);
+        if (!room.isJunction() && (room.isCorridor() || Random.maybe(0.1))) {
+          let p = room.local2global(Random.int(1 - w2, w2), depth - 1);
+          this.queueRoom(room, p, yAxis, this.getRoomSize());
         }
       }
     }
