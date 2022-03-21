@@ -4876,30 +4876,39 @@ class MapGenerator {
         continue;
       }
 
-      let toCut = 0;
-      while (true) {
+      console.log('Looking for a expected door...');
+      let toCut = 0, foundDoor = false;
+      for (toCut = 0; toCut < room.depth && !foundDoor; toCut++) { // TODO: Check why the original condition is `while(true)`
         let xy1 = room.local2global(-1, room.depth - 2 - toCut);
         let xy2 = room.local2global(1, room.depth - 2 - toCut);
-        if (this.getDoor(xy1) != null || this.getDoor(xy2) != null) {
-          break;
-        }
-        ++toCut;
+        foundDoor = this.getDoor(xy1) != null || this.getDoor(xy2) != null;
       }
       if (toCut <= 0) {
         continue;
       }
+      if (toCut >= room.depth) {
+        console.warn("Couldn't find a neighbored door.");
+        continue;
+      }
+
+      // To here, find a door at `toCut`
 
       if (Dot_UP.equals(room.yAxis)) {
+        // shrink the room by moving the top border down for toCut points.
         room.top += toCut;
         room.height -= toCut;
       } else if (Dot_LEFT.equals(room.yAxis)) {
+        // shrink the room by moving the left border right for toCut points.
         room.left += toCut;
         room.width -= toCut;
       } else if (Dot_DOWN.equals(room.yAxis)) {
+        // shrink the room by moving the bottom border up for toCut points.
         room.height -= toCut;
       } else if (Dot_RIGHT.equals(room.yAxis)) {
+        // shrink the room by moving the right border left for toCut points.
         room.width -= toCut;
       }
+      // shrink the room's height in its own coordinate system.
       room.depth -= toCut;
     }
   }
