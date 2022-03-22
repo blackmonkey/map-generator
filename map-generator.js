@@ -4056,13 +4056,13 @@ class Graph {
    * @param {Room} room
    */
   add(room) {
-    let node = new Node(room);
+    let node = new GraphNode(room);
     this.nodes.push(node);
     return node;
   }
 
   /**
-   * @param {Node} node
+   * @param {GraphNode} node
    */
   remove(node) {
     node.unlinkAll();
@@ -4071,7 +4071,7 @@ class Graph {
 
   /**
    * @param {Room} room
-   * @return {Node}
+   * @return {GraphNode}
    */
   getNode(room) {
     let nodes = this.nodes.filter(node => node.room.equals(room));
@@ -4079,9 +4079,9 @@ class Graph {
   }
 
   /**
-   * @param {Node} start
-   * @param {Node} goal
-   * @return {Node[]}
+   * @param {GraphNode} start
+   * @param {GraphNode} goal
+   * @return {GraphNode[]}
    */
   aStar(start, goal) {
     let closedSet = [];
@@ -4116,8 +4116,8 @@ class Graph {
 
   /**
    * @param {Map} cameFrom
-   * @param {Node} current
-   * @return {Node[]}
+   * @param {GraphNode} current
+   * @return {GraphNode[]}
    */
   buildPath(cameFrom, current) {
     let path = [current];
@@ -4129,7 +4129,7 @@ class Graph {
   }
 
   /**
-   * @param {Node[]} path
+   * @param {GraphNode[]} path
    * @return {number}
    */
   calculatePrice(path) {
@@ -4144,10 +4144,10 @@ class Graph {
 }
 
 
-class Node {
+class GraphNode {
   /**
    * @param {Room} room
-   * @return {Node}
+   * @return {GraphNode}
    */
   constructor(room) {
     this.links = new Map();
@@ -4155,13 +4155,13 @@ class Node {
   }
 
   /**
-   * @param {Node} node
+   * @param {GraphNode} node
    * @param {any} edgeData
    * @param {number} price
    * @param {boolean} symmetrical
    */
   link(node, edgeData, price=1, symmetrical=true) {
-    let edge = new Edge(edgeData, price);
+    let edge = new GraphEdge(edgeData, price);
     this.links.set(node, edge);
     if (symmetrical) {
       node.links.set(this, edge);
@@ -4169,7 +4169,7 @@ class Node {
   }
 
   /**
-   * @param {Node} node
+   * @param {GraphNode} node
    * @param {boolean} symmetrical
    */
   unlink(node, symmetrical=true) {
@@ -4187,11 +4187,11 @@ class Node {
   }
 }
 
-class Edge {
+class GraphEdge {
   /**
    * @param {any} data
    * @param {number} price
-   * @return {Edge}
+   * @return {GraphEdge}
    */
   constructor(data, price) {
     this.data = data;
