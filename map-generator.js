@@ -9,6 +9,11 @@ const GridType_DOTTED = 1;
 const GridType_DASHED = 2;
 const GridType_SOLID = 3;
 
+const SMALL_ROOM = 0;
+const LARGE_ROOM = 1;
+const CORRIDOR_ROOM = 2;
+const JUNCTION_ROOM = 3;
+
 const PresetMapStyle_DEFAULT = {
   colorInk: '#222022FF',
   colorWater: '#CCCECEFF',
@@ -4453,7 +4458,7 @@ class Planner {
 
 class MapGenerator {
   constructor(canvasId, opts={}, tags=[]) {
-    this.style = [0, 0, 0, 1, 2, 3, 3];
+    this.roomStyles = [SMALL_ROOM, SMALL_ROOM, SMALL_ROOM, LARGE_ROOM, CORRIDOR_ROOM, JUNCTION_ROOM, JUNCTION_ROOM];
     this.rooms = [];
     this.doors = [];
     this.doorBlocks = [];
@@ -4565,13 +4570,13 @@ class MapGenerator {
     }
 
     if (this.tags.includes('cramped')) {
-      this.style = [0, 0, 0, 2, 3, 3];
+      this.roomStyles = [SMALL_ROOM, SMALL_ROOM, SMALL_ROOM, CORRIDOR_ROOM, JUNCTION_ROOM, JUNCTION_ROOM];
     } else if (this.tags.includes('spacious')) {
-      this.style = [0, 0, 1, 1, 2, 3];
+      this.roomStyles = [SMALL_ROOM, SMALL_ROOM, LARGE_ROOM, LARGE_ROOM, CORRIDOR_ROOM, JUNCTION_ROOM];
     } else if (this.tags.includes('winding')) {
-      this.style = [0, 0, 1, 2, 2, 3, 3, 3, 3];
+      this.roomStyles = [SMALL_ROOM, SMALL_ROOM, LARGE_ROOM, CORRIDOR_ROOM, CORRIDOR_ROOM, JUNCTION_ROOM, JUNCTION_ROOM, JUNCTION_ROOM, JUNCTION_ROOM];
     } else if (this.tags.includes('compact')) {
-      this.style = [0, 0, 0, 1];
+      this.roomStyles = [SMALL_ROOM, SMALL_ROOM, SMALL_ROOM, LARGE_ROOM];
     }
 
     let order;
@@ -4618,20 +4623,20 @@ class MapGenerator {
     this.flood.setLevel(this.config.waterLevel / 10);
   }
 
-  getRoomSize() {
-    let style = Random.choose(this.style);
+  getRoomSize() { // checked
+    let style = Random.choose(this.roomStyles);
     let size = null;
     switch (style) {
-      case 0:
+      case SMALL_ROOM:
         size = new paper.Size(Random.int(5, 9), Random.int(4, 7));
         break;
-      case 1:
+      case LARGE_ROOM:
         size = new paper.Size(Random.int(5, 11), Random.int(7, 10));
         break;
-      case 2:
+      case CORRIDOR_ROOM:
         size = new paper.Size(3, Random.int(4, 6));
         break;
-      case 3:
+      case JUNCTION_ROOM:
         size = new paper.Size(3, 3);
         break;
     }
