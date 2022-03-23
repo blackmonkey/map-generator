@@ -2744,6 +2744,12 @@ class Room extends paper.Rectangle {
    */
   constructor(origin, yAxis, size, mirror=1) {
     let tl = new paper.Point(), sz = new paper.Size(), w2 = size.width >> 1;
+    /*
+     * The door of the room is inside the room, while it occupies 1x1 block whose top-left corner
+     * locates at room's origin. That's why the distnace between top and origin.y is NOT
+     * `size.height` but `size.height - 1` when the yAxis is UP. Same reason for the case when
+     * yAxis is LEFT.
+     */
     if (Dot_UP.equals(yAxis)) {
       tl.set(origin.x - w2, origin.y - size.height + 1);
       sz.set(size);
