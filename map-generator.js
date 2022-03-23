@@ -4784,12 +4784,9 @@ class MapGenerator {
       let grown = r1.getGrown();
       let overlaps = false;
       for (let r2 of this.rooms) {
-        if (!r2.equals(r1)) {
-          let i = r2.intersect(grown);
-          if (i.width > 1 && i.height > 1) {
-            overlaps = true;
-            break;
-          }
+        if (!r2.equals(r1) && r2.intersects(grown, -1)) {
+          overlaps = true;
+          break;
         }
       }
       if (!overlaps) {
