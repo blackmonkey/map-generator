@@ -4461,6 +4461,51 @@ class Planner {
   }
 }
 
+function zoomCanvas(event) {
+  let newZoom = paper.view.zoom;
+  let oldZoom = paper.view.zoom;
+  if (event.originalEvent.wheelDelta > 0 || event.originalEvent.detail < 0) {
+    // scroll up
+    newZoom = paper.view.zoom * 1.05;
+  } else {
+    // scroll down
+    newZoom = paper.view.zoom * 0.95;
+  }
+
+  let beta = oldZoom / newZoom;
+
+  let mousePosition = new paper.Point(event.offsetX, event.offsetY);
+
+  //viewToProject: gives the coordinates in the Project space from the Screen Coordinates
+  let viewPosition = paper.view.viewToProject(mousePosition);
+
+  let mpos = viewPosition;
+  let ctr = paper.view.center;
+
+  let pc = mpos.subtract(ctr);
+  let offset = mpos.subtract(pc.multiply(beta)).subtract(ctr);
+
+  paper.view.zoom = newZoom;
+  paper.view.center = paper.view.center.add(offset);
+
+  event.preventDefault();
+  paper.view.draw();
+}
+
+function createCanvasPanTool() {
+  let tool = new paper.Tool();
+
+  // Define a mousedown and mousedrag handler
+  tool.onMouseDown = function(event) {}
+
+  tool.onMouseDrag = function(event) {
+    let offset = event.point.subtract(event.downPoint);
+    paper.view.center = paper.view.center.subtract(offset);
+  }
+
+  tool.onMouseUp = function(event) {}
+}
+
 
 class MapGenerator {
   constructor(canvasId, opts={}, tags=[]) {
@@ -4488,6 +4533,9 @@ class MapGenerator {
     }, opts);
     this.updateGridPattern();
     paper.setup(canvasId);
+    $('#' + canvasId).on('mousewheel DOMMouseScroll', zoomCanvas);
+    createCanvasPanTool();
+
     this.reset(tags);
   }
 
