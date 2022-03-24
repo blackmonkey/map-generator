@@ -924,6 +924,37 @@ class Utils {
   }
 
   /**
+   * Compare two arrays.
+   * @param {any[]} a the first array to compare.
+   * @param {any[]} b the second array to compare.
+   * @return {boolean} `true` if two arrays equal, `false` otherwise.
+   */
+  static arrayEquals(a, b) {
+    return Array.isArray(a) &&
+        Array.isArray(b) &&
+        a.length === b.length &&
+        a.every((val, index) => {
+          let valHasEquals = typeof val === 'object' && val !== null && val.hasOwnProperty('equals');
+          return (valHasEquals && val.equals(b[index])) || (!valHasEquals && val === b[index]);
+        });
+  }
+
+  /**
+   * Create a 2D array.
+   * @param {number} rowCount the count of rows
+   * @param {number} colCount the count of cols
+   * @param {any} val the initial value
+   * @return {any[][]} the create 2D array.
+   */
+  static array2D(rowCount, colCount, val) {
+    let ary = [];
+    for (let y = 0; y < rowCount; y++) {
+      ary.push(new Array(colCount).fill(val));
+    }
+    return ary;
+  }
+
+  /**
    * @param {any[]} ary
    * @param {number[]} weights
    * @return {any}
@@ -1713,6 +1744,16 @@ class Poly {
    * @return {paper.Point[]}
    */
   static chaikinRender(points, closed, order=1, exclude=[]) {
+    if (points == undefined || points == null) {
+      console.warn('chaikinRender() no points, return empty array.');
+      return [];
+    }
+    points = points.filter(p => p != undefined && p != null);
+    if (points.length < 3) {
+      console.warn(`chaikinRender() too less points: ${points}`);
+      return points;
+    }
+
     for (let i = 0; i < order; i++) {
       let result = [];
       let n = points.length;
@@ -2100,7 +2141,7 @@ class Shading {
         let d1 = pre.equals(point) ? Infinity : pre.getDistance(point);
         let d2 = cur.equals(point) ? Infinity : cur.getDistance(point);
         return d1 > d2 ? cur : pre;
-      });
+      }, neighbours[0]);
       let a = point.subtract(c).angle;
       if (a > 0) {
         a += 60;
@@ -2139,7 +2180,7 @@ class Shading {
         let d1 = pre.equals(point) ? Infinity : pre.getDistance(point);
         let d2 = cur.equals(point) ? Infinity : cur.getDistance(point);
         return d1 > d2 ? cur : pre;
-      });
+      }, neighbours[0]);
       let a = point.subtract(c).angle;
       if (a > 0) {
         a += 60;
@@ -2179,7 +2220,7 @@ class Shading {
         ends.push(v0.add(dir.multiply(minLen)));
 
         strokes.push(ends);
-        Shading.stroke(layer, ends[0], ends[1]);
+        Shading.stroke(layer, config, ends[0], ends[1]);
       }
     }
   }
@@ -3587,9 +3628,11 @@ class Door extends paper.Point {
     this.to = to;
     this.type = Door.autoType(from, to);
     this.dir = null;
-    if (from != null) {
+
+    let doorBox = new paper.Rectangle({point:this, size:[1, 1]});
+    if (from != null && from.contains(doorBox)) {
       this.dir = from.out(this);
-    } else if (to != null) {
+    } else if (to != null && to.contains(doorBox)) {
       this.dir = to.out(this).negate();
     }
     if (this.dir == null) {
@@ -3819,19 +3862,18 @@ class Door extends paper.Point {
 }
 
 
-class Flood {
+class Flood extends paper.Rectangle {
   /**
    * @param {MapGenerator} dungeon
    * @param {number} level
    * @return {Flood}
    */
   constructor(dungeon, level=0.3) {
+    let rect = dungeon.getRect();
+    super({point: rect.point, size: rect.size});
+
     this.align = true;
-    this.scale = 1;
     this.dungeon = dungeon;
-    this.rect = dungeon.getRect();
-    this.width = this.rect.width * this.scale;
-    this.height = this.rect.height * this.scale;
     let size = Math.max(this.width, this.height);
     let octaves = Random.log(Math.log(size) / Math.log(2));
     this.map = new PerlinNoise().noiseMapHigh(size, size, octaves, 1, 0.5 + 0.3 * Math.abs(Random.times(4) * 2 - 1));
@@ -3868,8 +3910,7 @@ class Flood {
    */
   setLevel(lvl) {
     let threshold = Utils.interpolate(this.min, this.max, lvl);
-    this.bitmap = new Array(this.map.length).fill(new Array(this.map[0].length).fill(false));
-
+    this.bitmap = Utils.array2D(this.map.length, this.map[0].length, false);
     let x, y;
     let rect = this.dungeon.getRect();
     for (let r of this.dungeon.rooms) {
@@ -3893,12 +3934,12 @@ class Flood {
       }
     }
     this.pools.forEach(pool => this.bitmap[pool.y - rect.y][pool.x - rect.x] = true);
-    this.ofs = new paper.Point(0.5 / this.scale, 0.5 / this.scale);
-    this.points = new Array(this.height + 1).fill(new Array(this.width + 1).fill(null));
+    this.ofs = new paper.Point(0.5, 0.5);
+    this.points = Utils.array2D(this.height + 1, this.width + 1, null);
     let segments = this.buildSegments();
     this.edges = this.linkSegments(segments);
-    this.ripples1 = this.edges.map(poly => this.offset(poly, 0.2 / this.scale));
-    this.ripples2 = this.edges.map(poly => this.offset(poly, 0.4 / this.scale));
+    this.ripples1 = this.edges.map(poly => this.offset(poly, 0.2));
+    this.ripples2 = this.edges.map(poly => this.offset(poly, 0.4));
   }
 
   /**
@@ -3909,8 +3950,8 @@ class Flood {
   gp(x, y) {
     let p = this.points[y][x];
     if (p == null) {
-      p = new paper.Point(x / this.scale + this.rect.x, y / this.scale + this.rect.y);
-      p = p.add(new paper.Point({length: 0.3 / this.scale * (Random.times(3) * 2 - 1), angle: Random.float(180)}));
+      p = new paper.Point(x + this.left, y + this.top);
+      p = p.add(new paper.Point({length: 0.3 * (Random.times(3) * 2 - 1), angle: Random.float(180)}));
       if (!this.align) {
         p = p.add(this.ofs);
       }
@@ -3972,7 +4013,7 @@ class Flood {
         let toUnshift = null;
         for (let s of segments) {
           if (s.end.equals(poly[0])) {
-            toUnshift = s1;
+            toUnshift = s;
             break;
           }
         }
@@ -3998,9 +4039,9 @@ class Flood {
    * @return {paper.Point[]}
    */
   offset(poly, d=1) {
-    let curve = [];
-    for (let i = 0; i < poly.length; i++) {
-      let t = poly[i].subtract(poly[poly.length - i - 1]);
+    let curve = [], n = poly.length;
+    for (let i = 0; i < n; i++) {
+      let t = poly[(i + 1) % n].subtract(poly[(i + n - 1) % n]);
       curve.push(poly[i].add(new paper.Point(-t.y, t.x).normalize(d)));
     }
     return curve;
@@ -4012,9 +4053,9 @@ class Flood {
    * @return {paper.Point[]}
    */
   wavy(poly, d) {
-    let curve = [];
-    for (let i = 0; i < poly.length; i++) {
-      let t = poly[i].subtract(poly[poly.length - i - 1]);
+    let curve = [], n = poly.length;
+    for (let i = 0; i < n; i++) {
+      let t = poly[(i + 1) % n].subtract(poly[(i + n - 1) % n]);
       d = ((i & 2) == 0 ? d : -d) * (1 - Math.abs(Random.times(4) * 2 - 1)) || 1;
       curve.push(poly[i].add(new paper.Point(-t.y, t.x).normalize(d)));
     }
@@ -4029,13 +4070,13 @@ class Flood {
       return [];
     }
     let tiles = [];
-    for (let i = 0; i < this.height; i++) {
-      for (let j = 0; j < this.width; j++) {
-        if (this.bitmap[i][j]) {
-          let x = j + this.rect.x;
-          let y = i + this.rect.y;
+    for (let r = 0; r < this.height; r++) {
+      for (let c = 0; c < this.width; c++) {
+        if (this.bitmap[r][c]) {
+          let x = c + this.left;
+          let y = r + this.top;
           if (this.dungeon.rooms.some(room => room.contains(x, y))) {
-            tiles.push(new paper.Point(x,y));
+            tiles.push(new paper.Point(x, y));
           }
         }
       }
@@ -4054,6 +4095,10 @@ class Segment {
   constructor(start, end) {
     this.start = start;
     this.end = end;
+  }
+
+  toString() {
+    return `${this.start}->${this.end}`;
   }
 }
 
@@ -4221,6 +4266,8 @@ class Planner {
     this.graph = dungeon.getGraph();
     this.wings = new Map();
     this.secrets = [];
+    this.approach = [];
+    this.ante = null;
   }
 
   plan() {
@@ -4888,7 +4935,7 @@ class MapGenerator {
         }
       }
     }
-    if (q1 != null) {
+    if (q1 != null) { // also, q2 and intersection are not null, while wing1 or wing2 is still possible null.
       let door;
       if (intersection.height == 1) {
         door = new Door(
@@ -4903,7 +4950,9 @@ class MapGenerator {
           q2
         );
       }
-      let connect = wing1.equals(wing2) && (!this.planner.wings.get(wing1).equals(this.planner.approach) || this.planner.ante == null);
+      let connect = wing1.equals(wing2)
+        && (!Utils.arrayEquals(this.planner.approach, this.planner.wings.get(wing1))
+            || this.planner.ante == null);
       door.type = connect ? Door.autoType(q1, q2) : this.config.impassable;
       this.doors.push(door);
       return dist;
