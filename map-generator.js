@@ -4308,7 +4308,7 @@ class Planner {
   buildSecrets() {
     let candidates = this.leaves(this.dungeon.rooms);
     Utils.arrayRemove(candidates, this.last);
-    let rate = this.dungeon.tags.includes('secret') != -1 ? 2 : 1;
+    let rate = this.dungeon.tags.includes('secret') ? 2 : 1;
     for (let room of candidates) {
       if (!Random.maybe(rate * (this.dungeon.isUnique(room) ? 0.5 : 0.1))) {
         continue;
@@ -4694,7 +4694,6 @@ class MapGenerator {
         size = new paper.Size(3, 3);
         break;
     }
-    console.log(`getRoomSize() style=${style}, size=${size}`);
     return size;
   }
 
