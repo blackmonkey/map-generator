@@ -1657,11 +1657,20 @@ class Poly {
   }
 
   /**
-   * @param {paper.Point[]} poly
+   * @param {paper.Point[]|paper.Shape} poly
    * @param {number} s
    */
   static scale(poly, s) {
-    return poly.map(v => v.multiply(s));
+    if (poly instanceof Array) {
+      return poly.map(v => v.multiply(s));
+    }
+    if (poly instanceof paper.Shape) {
+      let toPos = poly.bounds.topLeft.multiply(30);
+      poly.scale(s);
+      return poly.translate(toPos.subtract(poly.bounds.topLeft));
+    }
+    console.error(`unknown poly type: ${poly}`);
+    return null;
   }
 
   /**
@@ -1899,6 +1908,30 @@ class Poly {
         return p;
       }
     }
+  }
+
+  /**
+   * @param {paper.Point[]|paper.Shape} poly
+   * @param {number} strokeWidth
+   * @param {boolean} closed
+   * @return The corresponding paper.Path instance.
+   */
+  static toPath(poly, strokeWidth=0, closed=true) {
+    if (poly instanceof Array) {
+      return new paper.Path({
+        segments: poly,
+        strokeWidth: strokeWidth,
+        closed: closed
+      });
+    }
+    if (poly instanceof paper.Shape) {
+      let path = poly.toPath();
+      path.strokeWidth = strokeWidth;
+      path.closed = closed;
+      return path;
+    }
+    console.error(`unknown poly type: ${poly}`);
+    return null;
   }
 }
 
@@ -2890,23 +2923,18 @@ class Room extends paper.Rectangle {
    * @return {paper.Point[]}
    */
   getPoly() {
-    let poly = [];
     if (this.round) {
-      let n = 36, c = this.inner.center;
-      let r = Math.sqrt(this.inner.width * this.inner.width + 1) / 2;
-      let p = c.add([r, 0]);
-      for (let i = 0; i < n; i++) {
-        poly.push(p.rotate(360 * i / n, c));
-      }
-    } else {
-      poly = [
-        this.inner.topLeft,
-        this.inner.topRight,
-        this.inner.bottomRight,
-        this.inner.bottomLeft
-      ];
+      return new paper.Shape.Circle({
+        center: this.inner.center,
+        radius: Math.sqrt(this.inner.width * this.inner.width + 1) / 2,
+        strokeWidth: 0
+      });
     }
-    return poly;
+    return new paper.Shape.Rectangle({
+      point: this.inner.point,
+      size: this.inner.size,
+      strokeWidth: 0
+    });
   }
 
   /**
@@ -4960,18 +4988,10 @@ class MapGenerator {
   }
 
   uniteShapes(shapes) {
-    let mask = new paper.Path({
-      segments: shapes[0],
-      strokeWidth: 0,
-      closed: true,
-    });
+    let mask = Poly.toPath(shapes[0]);
     let tmpShapes = [];
     for (let i = 1; i < shapes.length; i++) {
-      let p = new paper.Path({
-        segments: shapes[i],
-        strokeWidth: 0,
-        closed: true,
-      });
+      let p = Poly.toPath(shapes[i]);
       tmpShapes.push(p, mask);
       mask = mask.unite(p);
     }
