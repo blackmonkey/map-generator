@@ -2921,13 +2921,6 @@ class Room extends paper.Rectangle {
   }
 
   /**
-   * @return {paper.Point[]}
-   */
-  getSeams() {
-    return [];
-  }
-
-  /**
    * Project the room's inner point to global canvas.
    *
    * `this.yAxis` is the global vector for the y-axis of the room's inner coordinate system.
@@ -3536,8 +3529,6 @@ class Door extends paper.Point {
   static BARRED = 7;
   static EXIT = 8;
 
-  static front = [new paper.Point(15, -15), new paper.Point(15, 15)];
-
   /**
    * @param {paper.Point} pos
    * @param {Room} from
@@ -3634,46 +3625,6 @@ class Door extends paper.Point {
 
   getHatchingArea() {
     return new paper.Path.Rectangle(this.x * 30, this.y * 30, 30, 30);
-  }
-
-  getSeams() {
-    let seams = [];
-    switch (this.type) {
-      case Door.STAIRS:
-      case Door.SECRET:
-        seams = [[new paper.Point(0.5, -0.5), new paper.Point(0.5, 0.5)]];
-        break;
-      case Door.EXIT:
-        seams = [[new paper.Point(-0.5, -0.5), new paper.Point(-0.5, 0.5)]];
-        break;
-      default:
-        seams = [
-          [new paper.Point(0.5, -0.5), new paper.Point(0.5, 0.5)],
-          [new paper.Point(-0.5, -0.5), new paper.Point(-0.5, 0.5)]
-        ];
-    }
-    for (let seam of seams) {
-      Poly.asRotateYX(seam, this.dir.y, this.dir.x);
-      Poly.asTranslate(seam, this.add(0.5));
-    }
-    return seams;
-  }
-
-  /**
-   * @param {Map} config the style config
-   * @param {boolean} toOrFrom `true` if to this door, `false` otherwise.
-   * @param {paper.Path}
-   */
-  frontPath(config, toOrFrom) {
-    let i = toOrFrom ? 1 : -1;
-    let line = Poly.rotateYX(Door.front, i * this.dir.y, i * this.dir.x);
-    Poly.asTranslate(line, this.add(0.5).multiply(30));
-    return new paper.Path({
-      segments: line,
-      strokeWidth: config.gridMode == GridType_DOTTED ? config.style.strokeNormal : config.style.strokeThin,
-      strokeColor: config.style.colorInk,
-      dashArray: config.gridPattern
-    });
   }
 
   /**
@@ -4971,9 +4922,8 @@ class MapGenerator {
 
     this.drawShading();
     let shapes = this.drawable.map(shape => Poly.scale(shape.getPoly(), 30));
-    let seams = this.drawable.flatMap(shape => shape.getSeams().map(seam => Poly.scale(seam, 30)));
     this.unitedShape = this.uniteShapes(shapes);
-    this.drawShape(shapes, seams);
+    this.drawShapes(this.unitedShape);
     this.drawWater(shapes);
     this.drawShadows(this.unitedShape);
     this.drawGrids(this.unitedShape);
@@ -4991,18 +4941,18 @@ class MapGenerator {
   recreateLayers() {
     paper.project.clear();
     this.shading = paper.project.addLayer(new paper.Layer({name:'shading'}));
-    this.shape = paper.project.addLayer(new paper.Layer({name:'shape'}));
-    this.grid = paper.project.addLayer(new paper.Layer({name:'grid'}));
+    this.shapes = paper.project.addLayer(new paper.Layer({name:'shape'}));
+    this.grids = paper.project.addLayer(new paper.Layer({name:'grid'}));
     this.water = paper.project.addLayer(new paper.Layer({name:'water'}));
     this.corners = paper.project.addLayer(new paper.Layer({name:'corners'}));
     this.props = paper.project.addLayer(new paper.Layer({name:'props'}));
-    this.shadow = paper.project.addLayer(new paper.Layer({name:'shadow'}));
+    this.shadows = paper.project.addLayer(new paper.Layer({name:'shadow'}));
     this.details = paper.project.addLayer(new paper.Layer({name:'details'}));
 
     this.water.visible = this.config.showWater;
     this.corners.visible = this.config.showCorners;
     this.props.visible = this.config.showProps;
-    this.shadow.visible = this.config.showShadow && !this.config.blackAndWhite;
+    this.shadows.visible = this.config.showShadow && !this.config.blackAndWhite;
   }
 
   drawShading() {
@@ -5029,25 +4979,16 @@ class MapGenerator {
     return mask;
   }
 
-  drawShape(shapes, seams) {
+  drawShapes(unitedShape) {
     let thickness = this.config.style.hatchingStyle == 'Stonework' || this.config.style.hatchingStyle == 'Bricks' ? this.config.style.strokeNormal : this.config.style.strokeThick;
     let white = this.config.blackAndWhite ? this.config.style.colorPaper : this.config.style.colorBg;
-    shapes.forEach(poly =>
-      this.shape.addChild(new paper.Path({
-        segments: poly,
-        closed: true,
-        strokeColor: this.config.style.colorInk,
-        strokeWidth: thickness * 2,
-        fillColor: white
-      }))
-    );
-    seams.forEach(seam =>
-      this.shape.addChild(new paper.Path({
-        segments: seam,
-        strokeColor: white,
-        strokeWidth: 1
-      }))
-    );
+
+    this.shapes.removeChildren();
+    this.shapes.addChild(unitedShape.clone());
+    let shape = this.shapes.children[0];
+    shape.strokeColor = this.config.style.colorInk;
+    shape.strokeWidth = thickness;
+    shape.fillColor = white;
   }
 
   drawWater(shapes) {
@@ -5118,43 +5059,43 @@ class MapGenerator {
   }
 
   drawShadows(unitedShape) {
-    this.shadow.removeChildren();
+    this.shadows.removeChildren();
     if (this.config.style.shadowColor === '#FFFFFFFF') {
       return;
     }
 
-    this.shadow.addChildren([unitedShape.clone(), unitedShape.clone(), unitedShape.clone()]);
-    this.shadow.clipped = true;
+    this.shadows.addChildren([unitedShape.clone(), unitedShape.clone(), unitedShape.clone()]);
+    this.shadows.clipped = true;
 
-    let shape = this.shadow.children[1];
+    let shape = this.shadows.children[1];
     shape.strokeWidth = 32 * this.config.style.shadowDist;
     shape.strokeColor = this.config.style.shadowColor;
     shape.blendMode = 'multiply';
 
-    shape = this.shadow.children[2];
+    shape = this.shadows.children[2];
     shape.strokeWidth = 0;
     shape.fillColor = 'white';
     shape.blendMode = 'multiply';
 
-    this.shadow.translate(new paper.Point({
+    this.shadows.translate(new paper.Point({
       length: 16 * this.config.style.shadowDist,
       angle: 45 - this.config.rotation
     }));
   }
 
   drawGrids(unitedShape) {
-    this.grid.removeChildren();
+    this.grids.removeChildren();
     if (unitedShape == null || this.config.gridMode == GridType_HIDDEN) {
       return;
     }
 
-    this.grid.addChild(unitedShape.clone());
-    this.grid.clipped = true;
+    this.grids.addChild(unitedShape.clone());
+    this.grids.clipped = true;
 
     let strokeWidth = this.config.gridMode == GridType_DOTTED ? this.config.style.strokeNormal : this.config.style.strokeThin;
     let bounds = unitedShape.bounds;
     for (let y = bounds.top + 30; y < bounds.bottom; y += 30) {
-      this.grid.addChild(new paper.Path.Line({
+      this.grids.addChild(new paper.Path.Line({
         from: [bounds.left, y],
         to: [bounds.right, y],
         strokeWidth: strokeWidth,
@@ -5163,7 +5104,7 @@ class MapGenerator {
       }));
     }
     for (let x = bounds.left + 30; x < bounds.right; x += 30) {
-      this.grid.addChild(new paper.Path.Line({
+      this.grids.addChild(new paper.Path.Line({
         from: [x, bounds.top],
         to: [x, bounds.bottom],
         strokeWidth: strokeWidth,
@@ -5174,23 +5115,7 @@ class MapGenerator {
 
     this.rooms.forEach(room => {
       if (this.config.showProps && room.isNormal()) {
-        room.drawCracks(this.grid);
-      }
-    });
-
-    // TODO: verify whether the following block is necessary.
-    this.doors.forEach(door => {
-      switch (door.type) {
-        case Door.STAIRS:
-        case Door.SECRET:
-        case Door.BARRED:
-          this.grid.addChild(door.frontPath(this.config, true));
-          break;
-        case Door.EXIT:
-          break;
-        default:
-          this.grid.addChild(door.frontPath(this.config, true));
-          this.grid.addChild(door.frontPath(this.config, false));
+        room.drawCracks(this.grids);
       }
     });
   }
