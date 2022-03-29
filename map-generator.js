@@ -4650,10 +4650,10 @@ class MapGenerator {
     }
     // this.title.set_text(this.story.name); // TODO
     // this.story.set_text(this.story.hook); // TODO
-    console.log('MapGenerator.reset() start drawing all...');
+    console.log('[MapGenerator] start drawing all...');
     this.drawAll();
     // this.recreateNotes(); // TODO
-    console.log('MapGenerator.reset() DONE');
+    console.log('[MapGenerator] DONE');
   }
 
   build() {
