@@ -5133,13 +5133,11 @@ class MapGenerator {
       let mask = new paper.Path({
         segments: shapes[0],
         closed: true,
-        fillColor: 'red'
       });
       shapes.forEach(poly => {
         let p = new paper.Path({
           segments: poly,
           closed: true,
-          fillColor: 'red'
         });
         mask.unite(p);
         p.remove();
