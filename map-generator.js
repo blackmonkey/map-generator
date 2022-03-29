@@ -3347,25 +3347,6 @@ class Room extends paper.Rectangle {
   /**
    * @param {paper.Layer} layer
    */
-  drawGrid(layer) {
-    let config = this.dungeon.config;
-    if (config.showProps && this.isNormal()) {
-      this.drawCracks(layer);
-    }
-    if (config.gridMode == GridType_HIDDEN) {
-      return;
-    }
-
-    if (this.round) {
-      this.drawCircGrid(layer);
-    } else {
-      this.drawRectGrid(layer);
-    }
-  }
-
-  /**
-   * @param {paper.Layer} layer
-   */
   drawCracks(layer) {
     let r = this.round ? Math.sqrt(Math.pow(this.oWidth - 2, 2) + 1) / 2 : 0;
     let p = this.round ? Math.PI * r : 2 * (this.oWidth + this.oHeight - 4);
@@ -3468,65 +3449,6 @@ class Room extends paper.Rectangle {
       fillColor: this.dungeon.config.style.colorInk,
       closed: true
     }));
-  }
-
-  /**
-   * @param {paper.Layer} layer the layer to put this stroke.
-   */
-  drawRectGrid(layer) {
-    let config = this.dungeon.config;
-    let strokeWidth = config.gridMode == GridType_DOTTED ? config.style.strokeNormal : config.style.strokeThin;
-    let x, y;
-    for (let i = 1; i < this.height; i++) {
-      y = (this.top + i) * 30;
-      layer.addChild(new paper.Path.Line({
-        from: [this.left * 30, y],
-        to: [this.right * 30, y],
-        strokeWidth: strokeWidth,
-        strokeColor: config.style.colorInk,
-        dashArray: config.gridPattern
-      }));
-    }
-    for (let i = 1; i < this.width; i++) {
-      x = (this.left + i) * 30;
-      layer.addChild(new paper.Path.Line({
-        from: [x, this.top * 30],
-        to: [x, this.bottom * 30],
-        strokeWidth: strokeWidth,
-        strokeColor: config.style.colorInk,
-        dashArray: config.gridPattern
-      }));
-    }
-  }
-
-  /**
-   * @param {paper.Layer} layer the layer to put this stroke.
-   */
-  drawCircGrid(layer) {
-    let config = this.dungeon.config;
-    let strokeWidth = config.gridMode == GridType_DOTTED ? config.style.strokeNormal : config.style.strokeThin;
-    let c = this.center;
-    let r = this.width * 30 / 2;
-    let x, y, s;
-    for (let i = 1; i < this.height; i++) {
-      s = Math.cos(Math.asin(i / this.height * 2 - 1)) * r;
-      x = (this.left + i) * 30;
-      y = (this.top + i) * 30;
-      layer.addChild(new paper.Path.Line({
-        from: [c.x * 30 + s, y],
-        to: [c.x * 30 - s, y],
-        strokeWidth: strokeWidth,
-        strokeColor: config.style.colorInk,
-        dashArray: config.gridPattern
-      }));
-      layer.addChild(new paper.Path.Line({
-        from: [x, c.y * 30 + s],
-        to: [x, c.y * 30 - s],
-        strokeWidth: strokeWidth,
-        strokeColor: config.style.colorInk,
-        dashArray: config.gridPattern
-      }));
-    }
   }
 
   /**
@@ -3735,28 +3657,6 @@ class Door extends paper.Point {
       Poly.asTranslate(seam, this.add(0.5));
     }
     return seams;
-  }
-
-  /**
-   * @param {paper.Layer} layer
-   * @param {Map} config
-   */
-  drawGrid(layer, config) {
-    if (config.gridMode == GridType_HIDDEN) {
-      return;
-    }
-    switch (this.type) {
-      case Door.STAIRS:
-      case Door.SECRET:
-      case Door.BARRED:
-        layer.addChild(this.frontPath(config, true));
-        break;
-      case Door.EXIT:
-        break;
-      default:
-        layer.addChild(this.frontPath(config, true));
-        layer.addChild(this.frontPath(config, false));
-    }
   }
 
   /**
@@ -4560,6 +4460,7 @@ class MapGenerator {
     this.doors = [];
     this.doorBlocks = [];
     this.planner = null;
+    this.unitedShape = null;
 
     this.config = Object.assign({
       noteViewMode: NoteViewMode_NORMAL,
@@ -5071,11 +4972,11 @@ class MapGenerator {
     this.drawShading();
     let shapes = this.drawable.map(shape => Poly.scale(shape.getPoly(), 30));
     let seams = this.drawable.flatMap(shape => shape.getSeams().map(seam => Poly.scale(seam, 30)));
-    let unitedShape = this.uniteShapes(shapes);
+    this.unitedShape = this.uniteShapes(shapes);
     this.drawShape(shapes, seams);
     this.drawWater(shapes);
-    this.drawShadows(unitedShape);
-    this.drawGrid();
+    this.drawShadows(this.unitedShape);
+    this.drawGrids(this.unitedShape);
     this.rooms.forEach((room) => {
       if (this.config.showCorners) {
         room.drawCorners(this.corners);
@@ -5241,10 +5142,57 @@ class MapGenerator {
     }));
   }
 
-  drawGrid() {
+  drawGrids(unitedShape) {
     this.grid.removeChildren();
-    this.rooms.forEach(room => room.drawGrid(this.grid));
-    this.doors.forEach(door => door.drawGrid(this.grid, this.config));
+    if (unitedShape == null || this.config.gridMode == GridType_HIDDEN) {
+      return;
+    }
+
+    this.grid.addChild(unitedShape.clone());
+    this.grid.clipped = true;
+
+    let strokeWidth = this.config.gridMode == GridType_DOTTED ? this.config.style.strokeNormal : this.config.style.strokeThin;
+    let bounds = unitedShape.bounds;
+    for (let y = bounds.top + 30; y < bounds.bottom; y += 30) {
+      this.grid.addChild(new paper.Path.Line({
+        from: [bounds.left, y],
+        to: [bounds.right, y],
+        strokeWidth: strokeWidth,
+        strokeColor: this.config.style.colorInk,
+        dashArray: this.config.gridPattern
+      }));
+    }
+    for (let x = bounds.left + 30; x < bounds.right; x += 30) {
+      this.grid.addChild(new paper.Path.Line({
+        from: [x, bounds.top],
+        to: [x, bounds.bottom],
+        strokeWidth: strokeWidth,
+        strokeColor: this.config.style.colorInk,
+        dashArray: this.config.gridPattern
+      }));
+    }
+
+    this.rooms.forEach(room => {
+      if (this.config.showProps && room.isNormal()) {
+        room.drawCracks(this.grid);
+      }
+    });
+
+    // TODO: verify whether the following block is necessary.
+    this.doors.forEach(door => {
+      switch (door.type) {
+        case Door.STAIRS:
+        case Door.SECRET:
+        case Door.BARRED:
+          this.grid.addChild(door.frontPath(this.config, true));
+          break;
+        case Door.EXIT:
+          break;
+        default:
+          this.grid.addChild(door.frontPath(this.config, true));
+          this.grid.addChild(door.frontPath(this.config, false));
+      }
+    });
   }
 
   /**
@@ -5262,7 +5210,7 @@ class MapGenerator {
   setGridMode(mode) {
     this.config.gridMode = mode;
     updateGridPattern();
-    this.drawGrid();
+    this.drawGrids(this.unitedShape);
   }
 
   updateGridPattern() {
