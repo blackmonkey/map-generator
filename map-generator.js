@@ -4640,6 +4640,7 @@ class MapGenerator {
     if (newDungeon) {
       this.resolveTags(tags);
       this.initParameters();
+      this.recreateLayers();
       this.build();
       let secrets = this.planner.getSecrets();
       if (secrets.length > 0 && !this.config.showSecrets) {
