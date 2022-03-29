@@ -5071,9 +5071,10 @@ class MapGenerator {
     this.drawShading();
     let shapes = this.drawable.map(shape => Poly.scale(shape.getPoly(), 30));
     let seams = this.drawable.flatMap(shape => shape.getSeams().map(seam => Poly.scale(seam, 30)));
+    let unitedShape = this.uniteShapes(shapes);
     this.drawShape(shapes, seams);
     this.drawWater(shapes);
-    this.drawShadows(shapes);
+    this.drawShadows(unitedShape);
     this.drawGrid();
     this.rooms.forEach((room) => {
       if (this.config.showCorners) {
@@ -5105,6 +5106,26 @@ class MapGenerator {
 
   drawShading() {
     Shading.draw(this.shading, this.drawable.map(shape => shape.getHatchingArea()), this.config);
+  }
+
+  uniteShapes(shapes) {
+    let mask = new paper.Path({
+      segments: shapes[0],
+      strokeWidth: 0,
+      closed: true,
+    });
+    let tmpShapes = [];
+    for (let i = 1; i < shapes.length; i++) {
+      let p = new paper.Path({
+        segments: shapes[i],
+        strokeWidth: 0,
+        closed: true,
+      });
+      tmpShapes.push(p, mask);
+      mask = mask.unite(p);
+    }
+    tmpShapes.forEach(p => p.remove());
+    return mask;
   }
 
   drawShape(shapes, seams) {
@@ -5195,55 +5216,29 @@ class MapGenerator {
     });
   }
 
-  drawShadows(shapes) {
+  drawShadows(unitedShape) {
+    this.shadow.removeChildren();
     if (this.config.style.shadowColor === '#FFFFFFFF') {
       return;
     }
 
-    let mask = new paper.Path({
-      segments: shapes[0],
-      closed: true,
-      fillColor: 'red'
-    });
-    shapes.forEach(poly => {
-      let p = new paper.Path({
-        segments: poly,
-        closed: true,
-        fillColor: 'red'
-      });
-      mask.unite(p);
-      p.remove();
-    });
-    this.shadow.addChild(mask);
+    this.shadow.addChildren([unitedShape.clone(), unitedShape.clone(), unitedShape.clone()]);
     this.shadow.clipped = true;
 
-    let strokeWidth = 66 * this.config.style.shadowDist;
-    this.shadow.blendMode = 'multiply';
-    shapes.forEach(poly => {
-      this.shadow.addChildren([
-        new paper.Path({
-          segments: poly,
-          closed: true,
-          strokeColor: this.config.style.shadowColor,
-          strokeWidth: strokeWidth,
-        }),
-        new paper.Path({
-          segments: poly,
-          closed: true,
-          fillColor: 'white',
-        })
-      ]);
-    });
+    let shape = this.shadow.children[1];
+    shape.strokeWidth = 32 * this.config.style.shadowDist;
+    shape.strokeColor = this.config.style.shadowColor;
+    shape.blendMode = 'multiply';
 
-    this.adjustShadowsAngle();
-  }
+    shape = this.shadow.children[2];
+    shape.strokeWidth = 0;
+    shape.fillColor = 'white';
+    shape.blendMode = 'multiply';
 
-  adjustShadowsAngle() {
-    let a = new paper.Point({length: 30 * this.config.style.shadowDist, angle: 45 - this.config.rotation});
-    this.shadow.position = a;
-    if (this.shadow.clipped) {
-      this.shadow.firstChild.position = a.negate();
-    }
+    this.shadow.translate(new paper.Point({
+      length: 16 * this.config.style.shadowDist,
+      angle: 45 - this.config.rotation
+    }));
   }
 
   drawGrid() {
