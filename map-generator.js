@@ -5064,7 +5064,9 @@ class MapGenerator {
   }
 
   drawAll() {
-    this.recreateLayers();
+    this._front = paper.project.addLayer(new paper.Layer({name:'front'}));
+    this._front.activate();
+
     this.drawShading();
     let shapes = this.drawable.map(shape => Poly.scale(shape.getPoly(), 30));
     let seams = this.drawable.flatMap(shape => shape.getSeams().map(seam => Poly.scale(seam, 30)));
@@ -5079,6 +5081,8 @@ class MapGenerator {
     });
     this.doors.forEach(door => door.draw(this.details, this.config));
     this.rooms.forEach(room => room.drawColonnades(this.details));
+
+    this._front.removeChildren();
   }
 
   recreateLayers() {
