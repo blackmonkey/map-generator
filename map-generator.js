@@ -5087,7 +5087,7 @@ class MapGenerator {
     this.shadows.clipped = true;
 
     let shape = this.shadows.children[1];
-    shape.strokeWidth = 32 * this.config.style.shadowDist;
+    shape.strokeWidth = 33 * this.config.style.shadowDist;
     shape.strokeColor = this.config.style.shadowColor;
     shape.blendMode = 'multiply';
 
@@ -5096,8 +5096,9 @@ class MapGenerator {
     shape.fillColor = 'white';
     shape.blendMode = 'multiply';
 
+    let thickness = this.config.style.hatchingStyle == 'Stonework' || this.config.style.hatchingStyle == 'Bricks' ? this.config.style.strokeNormal : this.config.style.strokeThick;
     this.shadows.translate(new paper.Point({
-      length: 16 * this.config.style.shadowDist,
+      length: thickness / 2,
       angle: 45 - this.config.rotation
     }));
   }
