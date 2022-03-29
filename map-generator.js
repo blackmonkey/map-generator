@@ -3642,12 +3642,10 @@ class Door extends paper.Point {
         Poly.asTranslate(poly, this.add(0.5));
         return poly;
       default:
-        return [
-          new paper.Point(this.x, this.y),         //  +---+
-          new paper.Point(this.x + 1, this.y),     //  |   |
-          new paper.Point(this.x + 1, this.y + 1), //  +---+
-          new paper.Point(this.x, this.y + 1)      //
-        ];
+        // +---+
+        // |   |
+        // +---+
+        return new paper.Shape.Rectangle(this, this.add(1));
     }
   }
 
@@ -3663,18 +3661,18 @@ class Door extends paper.Point {
     let thick = config.style.hatchingStyle == 'Stonework' || config.style.hatchingStyle == 'Bricks' ? config.style.strokeNormal : config.style.strokeThick;
     let white = config.blackAndWhite ? config.style.colorPaper : config.style.colorBg;
     let dir = this.dir;
-    let pos = this.add(0.5).multiply(30);
+    let center = this.add(0.5).multiply(30);
     let size;
     switch (this.type) {
       case Door.NORMAL:
       case Door.SPECIAL:
         if (dir.y != 0) {
-          size = new paper.Point(18 + thick, 7.5);
+          size = new paper.Point(15 + thick, 7.5);
         } else {
-          size = new paper.Point(7.5, 18 + thick);
+          size = new paper.Point(7.5, 15 + thick);
         }
         layer.addChild(new paper.Path.Rectangle({
-          point: pos.subtract(size.divide(2)),
+          point: center.subtract(size.divide(2)),
           size: size,
           strokeWidth: thick,
           strokeColor: config.style.colorInk,
@@ -3682,8 +3680,8 @@ class Door extends paper.Point {
         }));
         if (this.type == Door.SPECIAL) {
           layer.addChild(new paper.Path.Line({
-            from: pos.subtract(dir.multiply(30/8)),
-            to: pos.add(dir.multiply(30/8)),
+            from: center.subtract(dir.multiply(30/8)),
+            to: center.add(dir.multiply(30/8)),
             strokeWidth: thick,
             strokeColor: config.style.colorInk
           }));
@@ -3692,20 +3690,21 @@ class Door extends paper.Point {
       case Door.PORTCULLIS:
         for (let i = -1; i < 2; i++) {
           layer.addChild(new paper.Path.Circle({
-            center: pos.add(dir.multiply(18 * i / 3)),
+            center: center.add(dir.multiply(18 * i / 3)),
             radius: thick / 2,
             fillColor: config.style.colorInk
           }));
         }
         break;
       case Door.BARRED:
+        center = center.subtract(dir.multiply(7.5));
         if (dir.y != 0) {
-          size = new paper.Point(18, 7.5);
+          size = new paper.Point(15 + thick, 7.5);
         } else {
-          size = new paper.Point(7.5, 18);
+          size = new paper.Point(7.5, 15 + thick);
         }
         layer.addChild(new paper.Path.Rectangle({
-          point: pos.subtract(size.divide(2)),
+          point: center.subtract(size.divide(2)),
           size: size,
           strokeWidth: thick,
           strokeColor: config.style.colorInk,
@@ -3714,8 +3713,8 @@ class Door extends paper.Point {
 
         let d = dir.multiply(9).rotate(90);
         layer.addChild(new paper.Path.Line({
-          from: pos.subtract(d),
-          to: pos.add(d),
+          from: center.subtract(d),
+          to: center.add(d),
           strokeWidth: config.style.strokeNormal,
           strokeColor: config.style.colorInk
         }));
@@ -3728,8 +3727,8 @@ class Door extends paper.Point {
           let d1 = dir.multiply(s);
           let d2 = dir.multiply(w2).rotate(90);
             layer.addChild(new paper.Path.Line({
-            from: pos.add(d1).subtract(d2),
-            to: pos.add(d1).add(d2),
+            from: center.add(d1).subtract(d2),
+            to: center.add(d1).add(d2),
             strokeWidth: config.style.strokeNormal,
             strokeColor: config.style.colorInk
           }));
