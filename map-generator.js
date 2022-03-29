@@ -2823,7 +2823,6 @@ class Room extends paper.Rectangle {
     this.origin = origin;
     this.yAxis = yAxis;
     this.mirror = mirror;
-    this.props = [];
     this.oWidth = size.width; // the room's width in its own coordinate system.
     this.oHeight = size.height; // the room's height in its own coordinate system.
     this.inner = this.expand(-2);
@@ -3115,7 +3114,7 @@ class Room extends paper.Rectangle {
     while (nRubble-- > 0) {
       let size = 0.1 + (crumbling ? 0.6 : 0.4) * Random.pow(3);
       let p = this.scatter(size);
-      this.props.push(new Boulder(this.dungeon.config).place(p, Random.float(180), size));
+      this.dungeon.props.addChild(new Boulder(this.dungeon.config).place(p, Random.float(180), size));
     }
     let aisleAvailable = this.aisleAvailable();
     let object =
@@ -3136,7 +3135,7 @@ class Room extends paper.Rectangle {
         this.addFountain();
       } else if (this.desc == null && Random.maybe(this.dungeon.config.wellChance * (this.round ? 2 : 1))) {
         this.dungeon.config.wellChance = 0;
-        this.props.push(new Well(this.dungeon.config).place(this.center));
+        this.dungeon.props.addChild(new Well(this.dungeon.config).place(this.center));
       } else if (Random.maybe(1/3)) {
         let n = Random.float(area / 5);
         if (Random.maybe(2/3)) {
@@ -3163,15 +3162,15 @@ class Room extends paper.Rectangle {
       }
       if (this.dungeon.tags.includes('multi-level')) {
         if (Random.maybe(0.5)) {
-          this.props.push(new Statue(this.dungeon.config).place(this.center));
+          this.dungeon.props.addChild(new Statue(this.dungeon.config).place(this.center));
         } else if (!this.round) {
-          this.props.push(new Dais(this.dungeon.config).place(this.aisle(), Utils.axis2angle(this.yAxis)));
+          this.dungeon.props.addChild(new Dais(this.dungeon.config).place(this.aisle(), Utils.axis2angle(this.yAxis)));
         }
       } else {
         let pos = this.round ? this.center : this.aisle();
         let drawing = this.round ? new SmallDais(this.dungeon.config) : new Dais(this.dungeon.config);
         let rotation = Utils.axis2angle(this.yAxis);
-        this.props.push(drawing.place(pos, rotation));
+        this.dungeon.props.addChild(drawing.place(pos, rotation));
 
         if (this.dungeon.tags.includes('temple')) {
           drawing = new Altar(this.dungeon.config);
@@ -3184,7 +3183,7 @@ class Room extends paper.Rectangle {
           drawing = new Statue(this.dungeon.config);
           rotation = 0;
         }
-        this.props.push(drawing.place(pos, rotation));
+        this.dungeon.props.addChild(drawing.place(pos, rotation));
       }
     }
   }
@@ -3192,43 +3191,43 @@ class Room extends paper.Rectangle {
   addTapestry() {
     let inst = new Tapestry(this.oWidth - 2, this.dungeon.config);
     inst.place(this.aisle(), Utils.axis2angle(-this.yAxis.y, this.yAxis.x));
-    this.props.push(inst);
+    this.dungeon.props.addChild(inst);
     return inst;
   }
 
   addStatue() {
     let inst = new Statue(this.dungeon.config).place(this.aisle());
-    this.props.push(inst);
+    this.dungeon.props.addChild(inst);
     return inst;
   }
 
   addSarcophagus() {
     let inst = new Sarcophagus(this.dungeon.config).place(this.aisle(), Utils.axis2angle(this.yAxis.abs()));
-    this.props.push(inst);
+    this.dungeon.props.addChild(inst);
     return inst;
   }
 
   addAltar() {
     let inst = new Altar(this.dungeon.config).place(this.aisle(), Utils.axis2angle(this.yAxis));
-    this.props.push(inst);
+    this.dungeon.props.addChild(inst);
     return inst;
   }
 
   addThrone() {
     let inst = new Throne(this.dungeon.config).place(this.aisle(), Utils.axis2angle(this.yAxis));
-    this.props.push(inst);
+    this.dungeon.props.addChild(inst);
     return inst;
   }
 
   addWell() {
     let inst = new Well(this.dungeon.config).place(this.aisle());
-    this.props.push(inst);
+    this.dungeon.props.addChild(inst);
     return inst;
   }
 
   addChest() {
     let inst = new Chest(this.dungeon.config).place(this.aisle(), Utils.axis2angle(this.yAxis));
-    this.props.push(inst);
+    this.dungeon.props.addChild(inst);
     return inst;
   }
 
@@ -3236,14 +3235,14 @@ class Room extends paper.Rectangle {
     let size = 0.4 + 0.6 * Random.times(3);
     let p = this.scatter(size);
     let inst = new Box(this.dungeon.config).place(p, Random.float(180), size);
-    this.props.push(inst);
+    this.dungeon.props.addChild(inst);
     return inst;
   }
 
   addBarrel(size) {
     let p = this.scatter(size);
     let inst = new Barrel(this.dungeon.config).place(p, Random.float(180), size);
-    this.props.push(inst);
+    this.dungeon.props.addChild(inst);
     return inst;
   }
 
@@ -3254,7 +3253,7 @@ class Room extends paper.Rectangle {
   addFountain() {
     let size = Math.sqrt(Math.min(this.inner.width, this.inner.height) / 3) * 1.5;
     let inst = new Fountain(this.dungeon.config).place(this.center, 0, size);
-    this.props.push(inst);
+    this.dungeon.props.addChild(inst);
     return inst;
   }
 
@@ -5077,7 +5076,6 @@ class MapGenerator {
       if (this.config.showCorners) {
         room.drawCorners(this.corners);
       }
-      this.props.addChildren(room.props);
     });
     this.doors.forEach(door => door.draw(this.details, this.config));
     this.rooms.forEach(room => room.drawColonnades(this.details));
