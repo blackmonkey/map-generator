@@ -2424,15 +2424,15 @@ class Shading {
       Poly.expandPath(shape.clone(), t).fillColor = shadingColor;
       if (shape instanceof paper.Path.Rectangle) {
         let rect = shape.bounds;
-        let n = Math.ceil(rect.w / step);
+        let n = Math.ceil(rect.width / step);
         for (let i = 0; i < n; i++) {
-          segs.push([new paper.Point(rect.x + rect.w * (i + Random.times(3)) / n,rect.y), up]);
-          segs.push([new paper.Point(rect.x + rect.w * (1 - (i + Random.times(3)) / n),rect.y + rect.h), down]);
+          segs.push([new paper.Point(rect.x + rect.width * (i + Random.times(3)) / n, rect.y), up]);
+          segs.push([new paper.Point(rect.x + rect.width * (1 - (i + Random.times(3)) / n), rect.y + rect.height), down]);
         }
-        n = Math.ceil(rect.h / step);
+        n = Math.ceil(rect.height / step);
         for (let i = 0; i < n; i++) {
-          segs.push([new paper.Point(rect.x + rect.w,rect.y + rect.h * (i + Random.times(3)) / n), right]);
-          segs.push([new paper.Point(rect.x,rect.y + rect.h * (1 - (i + Random.times(3)) / n)), left]);
+          segs.push([new paper.Point(rect.x + rect.width, rect.y + rect.height * (i + Random.times(3)) / n), right]);
+          segs.push([new paper.Point(rect.x, rect.y + rect.height * (1 - (i + Random.times(3)) / n)), left]);
         }
       } else {
         let circle = shape.bounds;
@@ -3488,11 +3488,9 @@ class Room extends paper.Rectangle {
       return;
     }
 
-    // TODO: directly create circle or rectangle path for the room.
-
     let inner = this.inner;
     if (this.round) {
-      let R = inner.w / 2 - 1;
+      let R = inner.width / 2 - 1;
       let n = Math.floor(Math.PI * R / 2) * 4;
       for (let i = 0; i < n; i++) {
         let a = (i + 0.5) / n * 360;
@@ -3538,7 +3536,7 @@ class Room extends paper.Rectangle {
         fillColor: fillColor
       })
       if (angle != 0) {
-        path.rotate(angle, [0, 0]);
+        path.rotate(angle);
       }
       layer.addChild(path);
     } else {
