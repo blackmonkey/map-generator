@@ -898,7 +898,7 @@ class Utils {
    * @param {any[]} the updated array, i.e. `ary1`.
    */
   static addAll(ary1, ary2) {
-    ary2.forEach((val) => {
+    ary2.forEach(val => {
       if (!Utils.includes(ary1, val)) {
         ary1.push(val);
       }
@@ -4263,7 +4263,7 @@ class Planner {
         parent = room.getEntrance().from;
       }
       let wings = this.addWing(room, true);
-      wings.forEach(r => r.getExits().forEach((d) => {
+      wings.forEach(r => r.getExits().forEach(d => {
         if (d.type == Door.NORMAL) {
           d.type = Door.ARCHWAY;
         }
@@ -4962,7 +4962,7 @@ class MapGenerator {
     this.drawWater(this.unitedShape);
     this.drawShadows(this.unitedShape);
     this.drawGrids(this.unitedShape);
-    this.rooms.forEach((room) => {
+    this.rooms.forEach(room => {
       if (this.config.showCorners) {
         room.drawCorners(this.corners);
       }
