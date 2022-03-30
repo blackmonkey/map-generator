@@ -1016,6 +1016,14 @@ class Utils {
     let floorError = Math.abs(val - floor), ceilError = Math.abs(val - ceil);
     return floorError <= ceilError ? floor : ceil;
   }
+
+  static getStrokeWidth(config) {
+    return config.style.hatchingStyle == 'Stonework' || config.style.hatchingStyle == 'Bricks' ? config.style.strokeNormal : config.style.strokeThick;
+  }
+
+  static getBgColor(config) {
+    return config.blackAndWhite ? config.style.colorPaper : config.style.colorBg;
+  }
 }
 
 
@@ -2501,7 +2509,7 @@ class Shape extends paper.Path {
   setStyle(config) {
     if (config != null) {
       this.strokeColor = config.style.colorInk;
-      this.fillColor = config.blackAndWhite ? config.style.colorPaper : config.style.colorBg;
+      this.fillColor = Utils.getBgColor(config);
     }
   }
 
@@ -3658,8 +3666,8 @@ class Door extends paper.Point {
    * @param {Map} config
    */
   draw(layer, config) {
-    let thick = config.style.hatchingStyle == 'Stonework' || config.style.hatchingStyle == 'Bricks' ? config.style.strokeNormal : config.style.strokeThick;
-    let white = config.blackAndWhite ? config.style.colorPaper : config.style.colorBg;
+    let thick = Utils.getStrokeWidth(config);
+    let white = Utils.getBgColor(config);
     let dir = this.dir;
     let center = this.add(0.5).multiply(30);
     let size;
@@ -4951,7 +4959,7 @@ class MapGenerator {
     let shapes = this.drawable.map(shape => Poly.scale(shape.getPoly(), 30));
     this.unitedShape = this.uniteShapes(shapes);
     this.drawShapes(this.unitedShape);
-    this.drawWater(shapes);
+    this.drawWater(this.unitedShape);
     this.drawShadows(this.unitedShape);
     this.drawGrids(this.unitedShape);
     this.rooms.forEach((room) => {
@@ -4999,34 +5007,21 @@ class MapGenerator {
   }
 
   drawShapes(unitedShape) {
-    let thickness = this.config.style.hatchingStyle == 'Stonework' || this.config.style.hatchingStyle == 'Bricks' ? this.config.style.strokeNormal : this.config.style.strokeThick;
-    let white = this.config.blackAndWhite ? this.config.style.colorPaper : this.config.style.colorBg;
+    let thickness = Utils.getStrokeWidth(this.config);
+    let white = Utils.getBgColor(this.config);
 
     this.shapes.removeChildren();
     this.shapes.addChild(unitedShape.clone());
-    let shape = this.shapes.children[0];
+    let shape = this.shapes.firstChild;
     shape.strokeColor = this.config.style.colorInk;
     shape.strokeWidth = thickness;
     shape.fillColor = white;
   }
 
-  drawWater(shapes) {
-    if (shapes != null) {
-      let mask = new paper.Path({
-        segments: shapes[0],
-        closed: true,
-      });
-      shapes.forEach(poly => {
-        let p = new paper.Path({
-          segments: poly,
-          closed: true,
-        });
-        mask.unite(p);
-        p.remove();
-      });
-      this.water.addChild(mask);
-      this.water.clipped = true;
-    }
+  drawWater(unitedShape) {
+    this.water.removeChildren();
+    this.water.addChild(unitedShape.clone());
+    this.water.clipped = true;
     this.water.visible = this.config.showWater;
     this.updateWater();
   }
@@ -5035,6 +5030,8 @@ class MapGenerator {
     let fillColor = this.config.blackAndWhite ? this.config.style.colorPaper : this.config.style.colorWater;
     let strokeWidth = this.config.style.strokeNormal;
     let strokeColor = this.config.style.colorInk;
+
+    this.water.removeChildren(1);
 
     this.flood.edges.forEach(poly => {
       let smoothed = Poly.chaikinRender(poly, true, 3);
@@ -5075,6 +5072,16 @@ class MapGenerator {
         dashArray: pattern
       }));
     });
+
+    /*
+     * FIXME: The water covers half of stroke. As a workaround, I just create another stroke to
+     * cover the border again. It is better to find a way to shrink the clip mask by half of stroke
+     * width.
+     */
+    let border = this.water.firstChild.clone();
+    border.strokeColor = this.config.style.colorInk;
+    border.strokeWidth = Utils.getStrokeWidth(this.config);
+    this.water.addChild(border);
   }
 
   drawShadows(unitedShape) {
@@ -5096,7 +5103,7 @@ class MapGenerator {
     shape.fillColor = 'white';
     shape.blendMode = 'multiply';
 
-    let thickness = this.config.style.hatchingStyle == 'Stonework' || this.config.style.hatchingStyle == 'Bricks' ? this.config.style.strokeNormal : this.config.style.strokeThick;
+    let thickness = Utils.getStrokeWidth(this.config);
     this.shadows.translate(new paper.Point({
       length: thickness / 2,
       angle: 45 - this.config.rotation
