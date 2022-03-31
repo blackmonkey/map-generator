@@ -3331,46 +3331,90 @@ class Room extends paper.Rectangle {
    */
   drawCorners(layer) {
     if (!this.round) {
-      let o = this.dungeon.config.style.strokeNormal * 1.5;
       if (this.dungeon.getDoor(this.inner.topLeft.subtract([1, 0])) == null && this.dungeon.getDoor(this.inner.topLeft.subtract([0, 1])) == null) {
-        this.drawCorner(layer, this.inner.left * 30 + o, this.inner.top * 30 + o, 1, 0);
+        this.drawCorner(layer, this.inner.topLeft, 'topleft');
       }
       if (this.dungeon.getDoor(this.inner.topRight) == null && this.dungeon.getDoor(this.inner.topRight.subtract(1)) == null) {
-        this.drawCorner(layer, this.inner.right * 30 - o, this.inner.top * 30 + o, 0, 1);
+        this.drawCorner(layer, this.inner.topRight.subtract([1, 0]), 'topright');
       }
       if (this.dungeon.getDoor(this.inner.bottomLeft) == null && this.dungeon.getDoor(this.inner.bottomLeft.subtract(1)) == null) {
-        this.drawCorner(layer, this.inner.left * 30 + o, this.inner.bottom * 30 - o, 0, -1);
+        this.drawCorner(layer, this.inner.bottomLeft.subtract([0, 1]), 'bottomleft');
       }
       if (this.dungeon.getDoor(this.inner.bottomRight.subtract([1, 0])) == null && this.dungeon.getDoor(this.inner.bottomRight.subtract([0, 1])) == null) {
-        this.drawCorner(layer, this.inner.right * 30 - o, this.inner.bottom * 30 - o, -1, 0);
+        this.drawCorner(layer, this.inner.bottomRight.subtract(1), 'bottomright');
       }
     }
   }
 
   /**
    * @param {paper.Layer} layer
-   * @param {number} x
-   * @param {number} y
-   * @param {number} rx
-   * @param {number} ry
+   * @param {paper.Point} pos the top-left position of the corner
+   * @param {string} name the position name of the corner
    */
-  drawCorner(layer, x, y, rx, ry) {
+  drawCorner(layer, pos, name) {
+    pos = pos.multiply(30);
     let config = this.dungeon.config;
-    let n2 = config.style.strokeNormal / 2;
-    let span = 30 - config.style.strokeNormal * 2;
-    let poly = [
-      new paper.Point(-n2, -n2),
-      new paper.Point(n2 + span * Random.times(3), -n2),
-      new paper.Point(n2, n2),
-      new paper.Point(-n2, n2 + span * Random.times(3))
-    ];
-    Poly.asRotateYX(poly, ry, rx);
-    Poly.asTranslate(poly, x, y);
-    layer.addChild(new paper.Path({
-      segments: Poly.chaikinRender(poly, true, 2, [poly[0]]),
-      fillColor: config.style.colorInk,
-      closed: true
-    }));
+    let d = config.style.strokeNormal * 2;
+    let d2 = config.style.strokeNormal * 4;
+    let square = new paper.Rectangle({
+      point: pos.add(d),
+      size: 30 - d2
+    });
+
+    let xMin = square.left + d;
+    let xMax = square.right - d;
+    let yMin = square.top + d;
+    let yMax = square.bottom - d;
+    let from, to, corner;
+    switch (name.toLowerCase()) {
+      case 'topleft':
+        from = new paper.Point(square.left, Random.float(yMin, yMax));
+        to = new paper.Point(Random.float(xMin, xMax), square.top);
+        corner = square.topLeft;
+        break;
+      case 'topright':
+        from = new paper.Point(Random.float(xMin, xMax), square.top);
+        to = new paper.Point(square.right, Random.float(yMin, yMax));
+        corner = square.topRight;
+        break;
+      case 'bottomleft':
+        from = new paper.Point(square.left, Random.float(yMin, yMax));
+        to = new paper.Point(Random.float(xMin, xMax), square.bottom);
+        corner = square.bottomLeft;
+        break;
+      case 'bottomright':
+        from = new paper.Point(Random.float(xMin, xMax), square.bottom);
+        to = new paper.Point(square.right, Random.float(yMin, yMax));
+        corner = square.bottomRight;
+        break;
+    }
+
+    // calculate the projected point from corner to vector [from, to).
+    let v1 = to.subtract(from);
+    let v2 = corner.subtract(from);
+    let angle = v1.angleInRadians - v2.angleInRadians;
+    v1.length = v2.length * Math.cos(angle);
+    let proj = from.add(v1);
+
+    // find the curve handler point on the above projecting vector.
+    v1 = proj.subtract(corner);
+    v1.length *= Random.float(0.25, 0.382);
+    let through = corner.add(v1);
+
+    // create the corner triangle
+    let triangle = new paper.Path({
+      segments: [corner, from, to],
+      strokeWidth: 0,
+      fillColor: config.style.colorInk
+    });
+
+    // adjust the handles of the curve.
+    triangle.smooth({from:1, to:2});
+    triangle.segments[1].handleOut = through.subtract(from);
+    triangle.segments[2].handleIn = through.subtract(to);
+
+    // add the corner to layer.
+    layer.addChild(triangle);
   };
 
   /**
@@ -4960,11 +5004,9 @@ class MapGenerator {
     this.drawWater(this.unitedShape);
     this.drawShadows(this.unitedShape);
     this.drawGrids(this.unitedShape);
-    this.rooms.forEach(room => {
-      if (this.config.showCorners) {
-        room.drawCorners(this.corners);
-      }
-    });
+    if (this.config.showCorners) {
+      this.rooms.forEach(room => room.drawCorners(this.corners));
+    }
     this.doors.forEach(door => door.draw(this.details, this.config));
     this.rooms.forEach(room => room.drawColonnades(this.details));
 
