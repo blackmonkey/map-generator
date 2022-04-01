@@ -985,13 +985,13 @@ class Utils {
       p = arg0;
     }
     if (p.equals(Dot_UP)) {
-      return 90;
+      return -90;
     }
     if (p.equals(Dot_LEFT)) {
-      return 180;
+      return -180;
     }
     if (p.equals(Dot_DOWN)) {
-      return 270;
+      return 90;
     }
     return 0;
   }
@@ -2484,8 +2484,8 @@ class Drawing extends paper.Group {  // <= com_watabou_dungeon_visuals_drawings_
   place(pos, angle=0, scale=1) {  // <= com_watabou_dungeon_visuals_drawings_Instance
     this.visible = true;
     this.rotate(angle);
+    this.translate(pos.multiply(30).subtract(this.bounds.topLeft));
     this.scale(scale * 30);
-    this.position = pos.multiply(30).add(this.bounds.size.divide(2));
     return this;
   }
 }
@@ -2522,8 +2522,8 @@ class Shape extends paper.Path {
   place(pos, angle=0, scale=1) {
     this.visible = true;
     this.rotate(angle);
+    this.translate(pos.multiply(30).subtract(this.bounds.topLeft));
     this.scale(scale * 30);
-    this.position = pos.multiply(30).add(this.bounds.size.divide(2));
     return this;
   }
 }
@@ -2682,15 +2682,33 @@ class Altar extends Drawing {
 }
 
 
-class Throne extends Drawing {
+class Throne extends Shape {
   /**
+   * Construct a throne in the following shape:
+   *     _______
+   *  __|____   |
+   * |       |  |
+   * |       |  |
+   * |_______|  |
+   *    |_______|
+   *
    * @param {Map} config the current config.
    * @return {Throne}
    */
   constructor(config) {
-    let shape1 = new Shape(Poly.rect(0.4, 0.5));
-    let shape2 = new Shape(Poly.translate(Poly.rect(0.3, 0.3), -0.1, 0));
-    super([shape1, shape2], config);
+    super([
+      [-0.2,  -0.15],
+      [-0.2,  -0.25],
+      [ 0.2,  -0.25],
+      [ 0.2,   0.25],
+      [-0.2,   0.25],
+      [-0.2,   0.15],
+      [-0.25,  0.15],
+      [-0.25, -0.15],
+      [ 0.05, -0.15],
+      [ 0.05,  0.15],
+      [-0.2,   0.15]
+    ], false, config);
   }
 }
 
@@ -2970,19 +2988,20 @@ class Room extends paper.Rectangle {
    * are integer.
    */
   local2global(px, py) {
-    // during projection:
     let res = new paper.Point(
-        px * this.mirror, // flip the x.
-        -py               // the room's inner y axis is up, while global canvas's y axis is down.
-      )
-      // - when room's y axis is right, vector (px, py) should be rotated clockwise for 90 degrees.
-      // - when room's y axis is up, vector (px, py) should not be rotated.
-      // - when room's y axis is left, vector (px, py) should be rotated counterclockwise for 90 degrees.
-      // - when room's y axis is down, vector (px, py) should be rotated for 180 degrees.
-      .rotate(90 - Utils.axis2angle(this.yAxis))
-      // then move vector (px, py) according to room's origin
-      .add(this.origin);
-    return new paper.Point(Utils.snapInt(res.x), Utils.snapInt(res.y));
+      px * this.mirror, // flip the x.
+      py
+    );
+    if (this.yAxis.equals(Dot_UP)) {
+      res.y = -res.y;
+    } else if (this.yAxis.equals(Dot_RIGHT)) {
+      res = new paper.Point(res.y, res.x);
+    } else if (this.yAxis.equals(Dot_DOWN)) {
+      res = new paper.Point(-res.x, res.y);
+    } else { // this.yAxis == Dot_LEFT
+      res = new paper.Point(-res.y, -res.x);
+    }
+    return res.add(this.origin);
   }
 
   /**
@@ -3111,12 +3130,11 @@ class Room extends paper.Rectangle {
    */
   scatter(size) {
     if (this.round) {
-      let c = this.center;
       let p = new paper.Point({
         length: (this.inner.width - size) / 2 * Random.pow(0.25),
         angle: Random.float(360)
       });
-      return p.add(c);
+      return this.center.add(p);
     }
     let px = Random.pow(1/3) * (Random.maybe(0.5) ? 0.5 : -0.5) + 0.5;
     let py = Random.pow(1/3) * (Random.maybe(0.5) ? 0.5 : -0.5) + 0.5;
@@ -3130,7 +3148,23 @@ class Room extends paper.Rectangle {
    * @return {paper.Point}
    */
   aisle() {
-    return this.local2global(0, this.oHeight - 2).add(0.5);
+    let w2f = this.oWidth / 2;
+    let w2i = this.oWidth >> 1;
+    let ox, oy;
+    if (this.yAxis.equals(Dot_UP)) {
+      ox = w2f - w2i;
+      oy = this.oHeight - 2.5;
+    } else if (this.yAxis.equals(Dot_RIGHT)) {
+      ox = w2f - w2i;
+      oy = this.oHeight - 1.5;
+    } else if (this.yAxis.equals(Dot_DOWN)) {
+      ox = w2i - w2f;
+      oy = this.oHeight - 1.5;
+    } else { // this.yAxis == Dot_LEFT
+      ox = w2i - w2f;
+      oy = this.oHeight - 2.5;
+    }
+    return this.local2global(ox, oy);
   }
 
   createProps() {
