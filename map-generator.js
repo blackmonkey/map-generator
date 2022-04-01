@@ -2707,8 +2707,9 @@ class Throne extends Shape {
       [-0.25, -0.15],
       [ 0.05, -0.15],
       [ 0.05,  0.15],
-      [-0.2,   0.15]
-    ], false, config);
+      [-0.25,  0.15],
+      [-0.25, -0.15]
+    ], true, config);
   }
 }
 
@@ -2720,9 +2721,21 @@ class Well extends Drawing {
    */
   constructor(config) {
     let r = 0.4;
-    let shape1 = new Shape(Poly.regular(16, r));
-    let shape2 = new WaterShape(Poly.regular(16, r * 0.6));
+    let shape1 = new paper.Path.Circle([0, 0], 0.4);
+    let shape2 = new paper.Path.Circle([0, 0], 0.24);
     super([shape1, shape2], config);
+  }
+
+  /**
+   * @param {Map} config the current config.
+   */
+  setStyle(config) {
+    if (config != null) {
+      this.children[0].strokeColor = config.style.colorInk;
+      this.children[0].fillColor = Utils.getBgColor(config);
+      this.children[1].strokeColor = config.style.colorInk;
+      this.children[1].fillColor = config.style.colorWater;
+    }
   }
 }
 
