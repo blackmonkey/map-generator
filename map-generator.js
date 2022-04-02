@@ -2458,20 +2458,19 @@ class Shading {
 
 class Drawing extends paper.Group {  // <= com_watabou_dungeon_visuals_drawings_Drawing
   /**
-   * @param {paper.Item[]} children the points of this shape.
+   * @param {paper.Item[]} children the shape pathes.
    * @param {Map} config the current config.
+   * @param {string[]} fillColors the corresponding fill colors.
    */
-  constructor(children=[], config=null) {
+  constructor(children=[], config=null, fillColors=[]) {
     super(children);
-    this.setStyle(config);
-  }
-
-  /**
-   * @param {Map} config the current config.
-   */
-  setStyle(config) {
-    if (config != null) {
-      this.children.forEach(p => p.setStyle(config));
+    if (fillColors.length == 0) {
+      let defaultFillColor = Utils.getBgColor(config);
+      fillColors = new Array(children.length).fill(defaultFillColor);
+    }
+    for (let i = 0; i < this.children.length; i++) {
+      this.children[i].strokeColor = config.style.colorInk;
+      this.children[i].fillColor = fillColors[i];
     }
   }
 
@@ -2529,54 +2528,6 @@ class Shape extends paper.Path {
 }
 
 
-class NoStokeShape extends Shape {
-  /**
-   * @param {Map} config the current config.
-   */
-  setStyle(config) {
-    super.setStyle(config);
-    this.strokeWidth = 0;
-  }
-}
-
-
-class NoStokeInkShape extends NoStokeShape {
-  /**
-   * @param {Map} config the current config.
-   */
-  setStyle(config) {
-    super.setStyle(config);
-    if (config != null) {
-      this.fillColor = config.style.colorInk;
-    }
-  }
-}
-
-
-class NoFillShape extends Shape {
-  /**
-   * @param {Map} config the current config.
-   */
-  setStyle(config) {
-    super.setStyle(config);
-    this.fillColor = undefined;
-  }
-}
-
-
-class WaterShape extends Shape {
-  /**
-   * @param {Map} config the current config.
-   */
-  setStyle(config) {
-    super.setStyle(config);
-    if (config != null) {
-      this.fillColor = config.style.colorWater;
-    }
-  }
-}
-
-
 class Boulder extends Shape {
   /**
    * @param {Map} config the current config.
@@ -2627,19 +2578,9 @@ class Statue extends Drawing {
    * @return {Statue}
    */
   constructor(config) {
-    let shape1 = new Shape(Poly.regular(16, 1/3));
-
-    let poly = [];
-    for (let i = 0; i < 10; i++) {
-      poly.push(
-        new paper.Point({
-          length: ((i & 1) == 0 ? 0.9 : 0.4) / 3,
-          angle: 36 * (i - 2.5)
-        })
-      );
-    }
-    let shape2 = new NoStokeInkShape(poly);
-    super([shape1, shape2], config);
+    let shape1 = new paper.Path.Circle([0, 0], 1/3);
+    let shape2 = new paper.Path.Star([0, 0], 5, 0.3, 0.4/3);
+    super([shape1, shape2], config, [Utils.getBgColor(config), config.style.colorInk]);
   }
 }
 
@@ -2658,9 +2599,9 @@ class Sarcophagus extends Drawing {
       new paper.Point(0.15, 0.45),
       new paper.Point(-0.15, 0.45)
     ];
-    let shape1 = new Shape(poly);
-    let shape2 = new NoFillShape(Poly.scale(poly, 0.7));
-    super([shape1, shape2], config);
+    let shape1 = new paper.Path({segments: poly, closed:true});
+    let shape2 = shape1.clone().scale(0.7);
+    super([shape1, shape2], config, [Utils.getBgColor(config), null]);
   }
 }
 
@@ -2671,18 +2612,15 @@ class Altar extends Drawing {
    * @return {Altar}
    */
   constructor(config) {
-    let poly = Poly.rect(0.4, 0.8);
-    let shape1 = new Shape(Poly.translate(poly, 0.2, 0));
-
-    poly = Poly.regular(6, 0.01);
-    let shape2 = new Shape(Poly.translate(poly, 0.2, -0.2));
-    let shape3 = new Shape(Poly.translate(poly, 0.2, 0.2));
+    let shape1 = new paper.Path.Rectangle([0, -0.4], [0.4, 0.8]);
+    let shape2 = new paper.Path.Circle([0.2, -0.2], 0.01);
+    let shape3 = new paper.Path.Circle([0.2, 0.2], 0.01);
     super([shape1, shape2, shape3], config);
   }
 }
 
 
-class Throne extends Shape {
+class Throne extends Drawing {
   /**
    * Construct a throne in the following shape:
    *     _______
@@ -2696,20 +2634,9 @@ class Throne extends Shape {
    * @return {Throne}
    */
   constructor(config) {
-    super([
-      [-0.2,  -0.15],
-      [-0.2,  -0.25],
-      [ 0.2,  -0.25],
-      [ 0.2,   0.25],
-      [-0.2,   0.25],
-      [-0.2,   0.15],
-      [-0.25,  0.15],
-      [-0.25, -0.15],
-      [ 0.05, -0.15],
-      [ 0.05,  0.15],
-      [-0.25,  0.15],
-      [-0.25, -0.15]
-    ], true, config);
+    let shape1 = new paper.Path.Rectangle([-0.2, -0.25], [0.4, 0.5]);
+    let shape2 = new paper.Path.Rectangle([-0.25, -0.15], [0.3, 0.3]);
+    super([shape1, shape2], config);
   }
 }
 
@@ -2720,22 +2647,9 @@ class Well extends Drawing {
    * @return {Well}
    */
   constructor(config) {
-    let r = 0.4;
     let shape1 = new paper.Path.Circle([0, 0], 0.4);
     let shape2 = new paper.Path.Circle([0, 0], 0.24);
-    super([shape1, shape2], config);
-  }
-
-  /**
-   * @param {Map} config the current config.
-   */
-  setStyle(config) {
-    if (config != null) {
-      this.children[0].strokeColor = config.style.colorInk;
-      this.children[0].fillColor = Utils.getBgColor(config);
-      this.children[1].strokeColor = config.style.colorInk;
-      this.children[1].fillColor = config.style.colorWater;
-    }
+    super([shape1, shape2], config, [Utils.getBgColor(config), config.style.colorWater]);
   }
 }
 
@@ -2746,13 +2660,12 @@ class Chest extends Drawing {
    * @return {Chest}
    */
   constructor(config) {
-    super([
-      new Shape(Poly.rect(0.6, 0.8)),
-      new Shape([new paper.Point(-0.3, -0.25), new paper.Point(0.3, -0.25)], false),
-      new Shape([new paper.Point(-0.3, -0.15), new paper.Point(0.3, -0.15)], false),
-      new Shape([new paper.Point(-0.3, 0.15), new paper.Point(0.3, 0.15)], false),
-      new Shape([new paper.Point(-0.3, 0.25), new paper.Point(0.3, 0.25)], false)
-    ], config);
+    let shape1 = new paper.Path.Rectangle([-0.3, -0.4], [0.6, 0.8]);
+    let shape2 = new paper.Path.Line([-0.3, -0.25], [0.3, -0.25]);
+    let shape3 = shape2.clone().translate(0, 0.1);
+    let shape4 = shape3.clone().translate(0, 0.3);
+    let shape5 = shape4.clone().translate(0, 0.1);
+    super([shape1, shape2, shape3, shape4, shape5], config);
   }
 }
 
@@ -2763,11 +2676,10 @@ class Box extends Drawing {
    * @return {Box}
    */
   constructor(config) {
-    super([
-      new Shape(Poly.rect(0.6, 0.6)),
-      new Shape([new paper.Point(-0.1, -0.3), new paper.Point(-0.1, 0.3)], false),
-      new Shape([new paper.Point(0.1, -0.3), new paper.Point(0.1, 0.3)], false)
-    ], config);
+    let shape1 = new paper.Path.Rectangle([-0.3, -0.3], [0.6, 0.6]);
+    let shape2 = new paper.Path.Line([-0.1, -0.3], [-0.1, 0.3]);
+    let shape3 = new paper.Path.Line([0.1, -0.3], [0.1, 0.3]);
+    super([shape1, shape2, shape3], config);
   }
 }
 
@@ -2778,13 +2690,11 @@ class Barrel extends Drawing {
    * @return {Barrel}
    */
   constructor(config) {
-    let r = 0.25, s = Math.cos(Math.PI/6);
-    let r2 = r / 2, rs = r * s;
     super([
-      new Shape(Poly.regular(16, r)),
-      new Shape([new paper.Point(-r, 0), new paper.Point(r, 0)], false),
-      new Shape([new paper.Point(-rs, -r2), new paper.Point(rs, -r2)], false),
-      new Shape([new paper.Point(-rs, r2), new paper.Point(rs, r2)], false)
+      new paper.Path.Circle([0, 0], 0.25),
+      new paper.Path.Line([-0.25, 0], [0.25, 0]),
+      new paper.Path.Line([-0.2165, -0.125], [0.2165, -0.125]),
+      new paper.Path.Line([-0.2165, 0.125], [0.2165, 0.125])
     ], config);
   }
 }
@@ -2796,12 +2706,10 @@ class Fountain extends Drawing {
    * @return {Fountain}
    */
   constructor(config) {
-    let r = 0.5;
-    super([
-      new Shape(Poly.regular(24, r)),
-      new WaterShape(Poly.regular(24, r * 0.8)),
-      new Shape(Poly.regular(12, r * 0.2))
-    ], config);
+    let shape1 = new paper.Path.Circle([0, 0], 0.5);
+    let shape2 = new paper.Path.Circle([0, 0], 0.4);
+    let shape3 = new paper.Path.Circle([0, 0], 0.1);
+    super([shape1, shape2, shape3], config, [Utils.getBgColor(config), config.style.colorWater, Utils.getBgColor(config)]);
   }
 }
 
@@ -2812,25 +2720,12 @@ class Dais extends Drawing {
    * @return {Dais}
    */
   constructor(config) {
-    let r1 = 1.50, r2 = 1.25, da = 11.25 /* degrees */;
-    let poly = [], p;
-    for (let i = -8; i < 9; i++) {
-      p = new paper.Point({length: r1, angle: 180 + i * da});
-      poly.push(p.add([0.5, 0]));
-    }
-    let shape1 = new NoStokeShape(poly);
-    let shape2 = new Shape(poly);
-    shape2.closed = false;
-
-    poly = [];
-    for (let i = -8; i < 9; i++) {
-      p = new paper.Point({length: r2, angle: 180 + i * da});
-      poly.push(p.add([0.5, 0]));
-    }
-    let shape3 = new Shape(poly);
-    shape3.closed = false;
-
+    let shape1 = new paper.Path.Arc([0.5, -1.5], [-1, 0], [0.5, 1.5]);
+    let shape2 = shape1.clone();
+    let shape3 = new paper.Path.Arc([0.5, -1.25], [-0.75, 0], [0.5, 1.25]);
     super([shape1, shape2, shape3], config);
+    this.children[0].closed = true;
+    this.children[0].strokeWidth = 0;
   }
 }
 
@@ -2841,7 +2736,9 @@ class SmallDais extends Drawing {
    * @return {SmallDais}
    */
   constructor(config) {
-    super([new Shape(Poly.regular(32, 1.25)), new NoFillShape(Poly.regular(32, 1))], config);
+    let shape1 = new paper.Path.Circle([0, 0], 1.25);
+    let shape2 = new paper.Path.Circle([0, 0], 1);
+    super([shape1, shape2], config, [Utils.getBgColor(config), undefined]);
   }
 }
 
@@ -3192,13 +3089,15 @@ class Room extends paper.Rectangle {
       let p = this.scatter(size);
       this.dungeon.props.addChild(new Boulder(this.dungeon.config).place(p, Random.float(180), size));
     }
+
     let aisleAvailable = this.aisleAvailable();
+    let aisle = this.aisle();
     let object =
-      this.checkDesc(['throne']) && aisleAvailable ? this.addThrone() :
-        this.checkDesc(['well']) && aisleAvailable ? this.addWell() :
-          this.checkDesc(['statue', 'sculpture']) && aisleAvailable ? this.addStatue() :
-            this.checkDesc(['sarcophagus', 'coffin']) && aisleAvailable ? this.addSarcophagus() :
-              this.checkDesc(['altar', 'pedestal']) && aisleAvailable ? this.addAltar() :
+      this.checkDesc(['throne']) && aisleAvailable ? this.addThrone(aisle) :
+        this.checkDesc(['well']) && aisleAvailable ? this.addWell(aisle) :
+          this.checkDesc(['statue', 'sculpture']) && aisleAvailable ? this.addStatue(aisle) :
+            this.checkDesc(['sarcophagus', 'coffin']) && aisleAvailable ? this.addSarcophagus(aisle) :
+              this.checkDesc(['altar', 'pedestal']) && aisleAvailable ? this.addAltar(aisle) :
                 this.checkDesc(['chest']) && aisleAvailable ? this.addChest() :
                   this.checkDesc(['crate', 'box', 'trunk']) && !this.columns ? this.addCrate() :
                     this.checkDesc(['tapestry']) && !this.round ? this.addTapestry() : null;
@@ -3211,7 +3110,7 @@ class Room extends paper.Rectangle {
         this.addFountain();
       } else if (this.desc == null && Random.maybe(this.dungeon.config.wellChance * (this.round ? 2 : 1))) {
         this.dungeon.config.wellChance = 0;
-        this.dungeon.props.addChild(new Well(this.dungeon.config).place(this.center));
+        this.addWell(this.center);
       } else if (Random.maybe(1/3)) {
         let n = Random.float(area / 5);
         if (Random.maybe(2/3)) {
@@ -3238,28 +3137,27 @@ class Room extends paper.Rectangle {
       }
       if (this.dungeon.tags.includes('multi-level')) {
         if (Random.maybe(0.5)) {
-          this.dungeon.props.addChild(new Statue(this.dungeon.config).place(this.center));
+          this.addStatue(this.center)
         } else if (!this.round) {
-          this.dungeon.props.addChild(new Dais(this.dungeon.config).place(this.aisle(), Utils.axis2angle(this.yAxis)));
+          this.addDais();
         }
       } else {
-        let pos = this.round ? this.center : this.aisle();
-        let drawing = this.round ? new SmallDais(this.dungeon.config) : new Dais(this.dungeon.config);
-        let rotation = Utils.axis2angle(this.yAxis);
-        this.dungeon.props.addChild(drawing.place(pos, rotation));
-
-        if (this.dungeon.tags.includes('temple')) {
-          drawing = new Altar(this.dungeon.config);
-        } else if (this.dungeon.tags.includes('tomb')) {
-          drawing = new Sarcophagus(this.dungeon.config);
-          rotation = Utils.axis2angle(this.yAxis.abs());
-        } else if (this.dungeon.tags.includes('dwelling')) {
-          drawing = new Throne(this.dungeon.config);
+        if (this.round) {
+          this.addSmallDais();
         } else {
-          drawing = new Statue(this.dungeon.config);
-          rotation = 0;
+          this.addDais();
         }
-        this.dungeon.props.addChild(drawing.place(pos, rotation));
+
+        let pos = this.round ? this.center : aisle;
+        if (this.dungeon.tags.includes('temple')) {
+          this.addAltar(pos);
+        } else if (this.dungeon.tags.includes('tomb')) {
+          this.addSarcophagus(pos);
+        } else if (this.dungeon.tags.includes('dwelling')) {
+          this.addThrone(pos);
+        } else {
+          this.addStatue(pos);
+        }
       }
     }
   }
@@ -3271,32 +3169,32 @@ class Room extends paper.Rectangle {
     return inst;
   }
 
-  addStatue() {
-    let inst = new Statue(this.dungeon.config).place(this.aisle());
+  addStatue(pos) {
+    let inst = new Statue(this.dungeon.config).place(pos);
     this.dungeon.props.addChild(inst);
     return inst;
   }
 
-  addSarcophagus() {
-    let inst = new Sarcophagus(this.dungeon.config).place(this.aisle(), Utils.axis2angle(this.yAxis.abs()));
+  addSarcophagus(pos) {
+    let inst = new Sarcophagus(this.dungeon.config).place(pos, Utils.axis2angle(this.yAxis.abs()));
     this.dungeon.props.addChild(inst);
     return inst;
   }
 
-  addAltar() {
-    let inst = new Altar(this.dungeon.config).place(this.aisle(), Utils.axis2angle(this.yAxis));
+  addAltar(pos) {
+    let inst = new Altar(this.dungeon.config).place(pos, Utils.axis2angle(this.yAxis));
     this.dungeon.props.addChild(inst);
     return inst;
   }
 
-  addThrone() {
-    let inst = new Throne(this.dungeon.config).place(this.aisle(), Utils.axis2angle(this.yAxis));
+  addThrone(pos) {
+    let inst = new Throne(this.dungeon.config).place(pos, Utils.axis2angle(this.yAxis));
     this.dungeon.props.addChild(inst);
     return inst;
   }
 
-  addWell() {
-    let inst = new Well(this.dungeon.config).place(this.aisle());
+  addWell(pos) {
+    let inst = new Well(this.dungeon.config).place(pos);
     this.dungeon.props.addChild(inst);
     return inst;
   }
@@ -3329,6 +3227,18 @@ class Room extends paper.Rectangle {
   addFountain() {
     let size = Math.sqrt(Math.min(this.inner.width, this.inner.height) / 3) * 1.5;
     let inst = new Fountain(this.dungeon.config).place(this.center, 0, size);
+    this.dungeon.props.addChild(inst);
+    return inst;
+  }
+
+  addDais() {
+    let inst = new Dais(this.dungeon.config).place(this.aisle(), Utils.axis2angle(this.yAxis));
+    this.dungeon.props.addChild(inst);
+    return inst;
+  }
+
+  addSmallDais() {
+    let inst = new SmallDais(this.dungeon.config).place(this.center, Utils.axis2angle(this.yAxis));
     this.dungeon.props.addChild(inst);
     return inst;
   }
