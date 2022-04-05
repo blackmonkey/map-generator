@@ -4973,12 +4973,12 @@ class MapGenerator {
   recreateLayers() {
     paper.project.clear();
     this.shading = paper.project.addLayer(new paper.Layer({name:'shading'}));
-    this.shapes = paper.project.addLayer(new paper.Layer({name:'shape'}));
-    this.grids = paper.project.addLayer(new paper.Layer({name:'grid'}));
+    this.shapes = paper.project.addLayer(new paper.Layer({name:'shapes'}));
+    this.grids = paper.project.addLayer(new paper.Layer({name:'grids'}));
     this.water = paper.project.addLayer(new paper.Layer({name:'water'}));
     this.corners = paper.project.addLayer(new paper.Layer({name:'corners'}));
     this.props = paper.project.addLayer(new paper.Layer({name:'props'}));
-    this.shadows = paper.project.addLayer(new paper.Layer({name:'shadow'}));
+    this.shadows = paper.project.addLayer(new paper.Layer({name:'shadows'}));
     this.details = paper.project.addLayer(new paper.Layer({name:'details'}));
 
     this.water.visible = this.config.showWater;
