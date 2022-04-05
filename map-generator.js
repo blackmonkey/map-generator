@@ -1006,17 +1006,6 @@ class Utils {
     return a + (b - a) * w;
   }
 
-  /**
-   * Align the specific value to closed integer.
-   * @param {number} val the value to align.
-   * @return {number} the closed integer.
-   */
-  static snapInt(val) {
-    let floor = Math.floor(val), ceil = Math.ceil(val);
-    let floorError = Math.abs(val - floor), ceilError = Math.abs(val - ceil);
-    return floorError <= ceilError ? floor : ceil;
-  }
-
   static getStrokeWidth(config) {
     return config.style.hatchingStyle == 'Stonework' || config.style.hatchingStyle == 'Bricks' ? config.style.strokeNormal : config.style.strokeThick;
   }
@@ -1634,21 +1623,6 @@ class Poly {
    * @param {number|paper.Point} arg1
    * @param {[number]} arg2
    */
-  static translate(poly, arg1, arg2) {
-    let dp, type1 = typeof arg1;
-    if (type1 === 'object') {
-      dp = arg1;
-    } else {
-      dp = new paper.Point(arg1, arg2);
-    }
-    return poly.map(v => v.add(dp));
-  }
-
-  /**
-   * @param {paper.Point[]} poly
-   * @param {number|paper.Point} arg1
-   * @param {[number]} arg2
-   */
   static asTranslate(poly, arg1, arg2) {
     let dx, dy, type1 = typeof arg1;
     if (type1 === 'object') {
@@ -1683,29 +1657,6 @@ class Poly {
 
   /**
    * @param {paper.Point[]} poly
-   * @param {number} s
-   */
-  static asScale(poly, s) {
-    for (let i = 0; i < poly.length; i++) {
-      poly[i].x *= s;
-      poly[i].y *= s;
-    }
-  }
-
-  /**
-   * @param {paper.Point[]} poly
-   * @param {number} sin
-   * @param {number} cos
-   */
-  static rotateYX(poly, sin, cos) {
-    // TODO: convert (sin, cos) to angle, and use Point.rotate():
-    // 1. compare (sin, cos) with Dot_* to get n * 90;
-    // 2. otherwise return new paper.Point(sin, cos).angle
-    return poly.map(v => new paper.Point(v.x * cos - v.y * sin, v.x * sin + v.y * cos));
-  }
-
-  /**
-   * @param {paper.Point[]} poly
    * @param {number} sin
    * @param {number} cos
    */
@@ -1735,23 +1686,6 @@ class Poly {
     ];
   }
 
-  /**
-   * Creates a regular polygon poly.
-   * @param {number} sides the number of sides of the polygon
-   * @param {number} radius the radius of the polygon
-   * @return {paper.Point[]} the created poly.
-   */
-  static regular(sides, radius) { // TODO: directly return a Path.
-    let p = new paper.Path.RegularPolygon({
-      center: [0, 0],
-      sides: sides,
-      radius: radius,
-      visible: false
-    });
-    let poly = p.segments.map(s => s.point);
-    p.remove();
-    return poly;
-  }
 
   /**
    * @param {paper.Point[]} points
