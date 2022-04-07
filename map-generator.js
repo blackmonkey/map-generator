@@ -1646,8 +1646,8 @@ class Poly {
     if (poly instanceof Array) {
       return poly.map(v => v.multiply(s));
     }
-    if (poly instanceof paper.Shape) {
-      let toPos = poly.bounds.topLeft.multiply(30);
+    if (poly instanceof paper.Path) {
+      let toPos = poly.bounds.topLeft.multiply(s);
       poly.scale(s);
       return poly.translate(toPos.subtract(poly.bounds.topLeft));
     }
@@ -1827,17 +1827,6 @@ class Poly {
 
   /**
    * @param {paper.Path} path
-   * @param {number} d the expanding distance in every dimentions.
-   * @return {paper.Path} the expanded clone path.
-   */
-  static expandPath(path, d) {
-    path.translate(new paper.Point(-d, -d));
-    d *= 2;
-    return path.scale((path.bounds.width + d)/path.bounds.width, (path.bounds.height + d)/path.bounds.height);
-  }
-
-  /**
-   * @param {paper.Path} path
    * @return {paper.Point}
    */
   static pickPoint(path) {
@@ -1875,40 +1864,20 @@ class Poly {
     console.error(`unknown poly type: ${poly}`);
     return null;
   }
-}
-
-
-class PathCollection { // <= com_watabou_dungeon_utils_PoissonDiskShapeCollection
-  /**
-   * @param {paper.Path[]} shapes
-   * @return {PathCollection}
-   */
-  constructor(shapes) {
-    this.shapes = shapes;
-  }
 
   /**
-   * @return {paper.Rectangle}
+   * @param {paper.Path[]} paths
+   * @return {paper.Path}
    */
-  getBounds() {
-    let bounds = new paper.Rectangle();
-    this.shapes.forEach(shape => bounds = bounds.unite(shape));
-    return bounds;
-  }
-
-  /**
-   * @return {paper.Point}
-   */
-  pickPoint() {
-    return Poly.pickPoint(Random.choose(this.shapes));
-  }
-
-  /**
-   * @param {paper.Point} p
-   * @returns {boolean}
-   */
-  contains(p) {
-    return this.shapes.some(shape => shape.contains(p));
+  static unitePaths(paths) {
+    let mask = paths[0];
+    let tmpShapes = [];
+    for (let i = 1; i < paths.length; i++) {
+      tmpShapes.push(paths[i], mask);
+      mask = mask.unite(paths[i]);
+    }
+    tmpShapes.forEach(p => p.remove());
+    return mask;
   }
 }
 
@@ -1927,7 +1896,7 @@ class PoissonDisk {
     this.cellSize = r / Math.sqrt(2);
     if (shape != null) {
       this.init(shape.getBounds());
-      this.emit(shape.pickPoint());
+      this.emit(Poly.pickPoint(shape));
     }
   }
 
@@ -2031,12 +2000,12 @@ class PoissonDisk {
 
 class Shading {
   /**
-   * @param {paper.Path[]} shapes
+   * @param {paper.Path} shape
    * @param {Map} config
+   * @return {PoissonDisk}
    */
-  static getPoisson(shapes, config) {
-    let shape = new PathCollection(shapes);
-    let pd = new PoissonDisk(config.style.hatchingSize, shape);
+  static getPoisson(shape, config) {
+    let pd = new PoissonDisk(config.style.hatchingSize * 30, shape);
     while (pd.step()) {}
     return pd;
   };
@@ -2069,48 +2038,46 @@ class Shading {
 
   /**
    * @param {paper.Layer} layer
-   * @param {paper.Path[]} shapes
+   * @param {ShapeDef[]} shapeDefs
    * @param {Map} config
    */
-  static draw(layer, shapes, config) {
+  static draw(layer, shapeDefs, config) {
     if (config.style.hatchingStyle == 'Stonework') {
-      Shading.doStonework(layer, shapes, config);
+      Shading.doStonework(layer, shapeDefs, config);
     } else if (config.style.hatchingStyle == 'Bricks') {
-      Shading.doBricks(layer, shapes, config);
+      Shading.doBricks(layer, shapeDefs, config);
     } else {
-      shapes = shapes.map(shape => Poly.expandPath(shape, config.style.hatchingDistance));
+      let shapes = shapeDefs.map(def => def.toPath(config.style.hatchingDistance));
+      let wholeShade = Poly.unitePaths(shapes);
       if (!config.blackAndWhite && config.style.colorShading != config.style.colorPaper) {
-        Shading.doShading(layer, shapes, config);
+        Shading.doShading(layer, wholeShade, config);
       }
       if (config.style.hatchingStyle == 'Default') {
-        let d = -config.style.hatchingDistance - config.style.hatchingSize * 2 / 3;
-        let excludes = shapes.map(shape => Poly.expandPath(shape.clone(), d));
+        let excludes = shapeDefs.map(def => def.toPath(-config.style.hatchingSize, 0));
+        let wholeExclude = Poly.unitePaths(excludes);
+        let hatchShape = wholeShade.subtract(wholeExclude, {insert:false});
+        let pd = Shading.getPoisson(hatchShape, config);
+        wholeExclude.remove();
+        hatchShape.remove();
         if (config.preciseShadingStrokes) {
-          Shading.doImprovedHatching(layer, shapes, config, excludes);
+          Shading.doImprovedHatching(layer, pd, config);
         } else {
-          Shading.doHatching(layer, shapes, config, excludes);
+          Shading.doHatching(layer, pd, config);
         }
-        excludes.forEach(e => e.remove());
       }
     }
-    shapes.forEach(s => s.remove());
   }
 
   /**
    * @param {paper.Layer} layer
-   * @param {paper.Path[]} shapes
+   * @param {PoissonDisk} pd
    * @param {Map} config
-   * @param {paper.Path[]} excludes
    */
-  static doHatching(layer, shapes, config, excludes) {
-    let pd = Shading.getPoisson(shapes, config);
+  static doHatching(layer, pd, config) {
     let points = pd.points;
     let strokeWidth = config.style.hatchingStrokes;
     let strokeHalfWidth = (strokeWidth - 1) / 2;
     for (let point of points) {
-      if (excludes.some(shape => shape.contains(point))) {
-        continue;
-      }
       let neighbours = pd.getNeighbours(point);
       let c = neighbours.reduce((pre, cur) => {
         let d1 = pre.equals(point) ? Infinity : pre.getDistance(point);
@@ -2134,20 +2101,15 @@ class Shading {
 
   /**
    * @param {paper.Layer} layer
-   * @param {paper.Path[]} shapes
+   * @param {PoissonDisk} pd
    * @param {Map} config
-   * @param {paper.Path[]} excludes
    */
-  static doImprovedHatching(layer, shapes, config, excludes) {
-    let pd = Shading.getPoisson(shapes, config);
+  static doImprovedHatching(layer, pd, config) {
     let points = pd.points;
     let strokeWidth = config.style.hatchingStrokes;
     let strokeHalfWidth = (strokeWidth - 1) / 2;
     let clusters = new Map();
     for (let point of points) {
-      if (excludes.some(shape => shape.contains(point))) {
-        continue;
-      }
       let strokes = [];
       clusters.set(point, strokes);
       let neighbours = pd.getNeighbours(point);
@@ -2160,7 +2122,7 @@ class Shading {
       if (a > 0) {
         a += 60;
       }
-      let dir = new paper.Point({length: config.style.hatchingSize / 2, angle: a});
+      let dir = new paper.Point({length: config.style.hatchingSize * 15, angle: a});
       for (let i = 0; i < strokeWidth; i++) {
         let rate = (i - strokeHalfWidth) / strokeHalfWidth;
         let v0 = dir.rotate(90).multiply(rate).add(point);
@@ -2202,84 +2164,63 @@ class Shading {
 
   /**
    * @param {paper.Layer} layer
-   * @param {paper.Path[]} shapes
+   * @param {paper.Path} shape
    * @param {Map} config
    */
-  static doShading(layer, shapes, config) {
-    let strokeColor = new paper.Color(config.style.colorShading);
-    strokeColor.alpha = 0.4;
-    for (let shape of shapes) {
-      if ((shape instanceof paper.Path.Rectangle)) {
-        layer.addChild(new paper.Path.Rectangle({
-          point: shape.point,
-          size: shape.size,
-          radius: config.style.hatchingDistance * 2,
-          fillColor: config.style.colorShading,
-          strokeWidth: config.style.strokeThick,
-          strokeColor: strokeColor,
-        }));
-      } else {
-        layer.addChild(new paper.Path.Circle({
-          center: shape.center,
-          radius: config.style.hatchingDistance * 2,
-          fillColor: config.style.colorShading,
-          strokeWidth: config.style.strokeThick,
-          strokeColor: strokeColor,
-        }));
-      }
-    }
+  static doShading(layer, shape, config) {
+    shape.fillColor = config.style.colorShading;
+    shape.strokeWidth = config.style.strokeThick;
+    shape.strokeColor = new paper.Color(config.style.colorShading);
+    shape.strokeColor.alpha = 0.4;
+    layer.addChild(shape);
   }
 
   /**
    * @param {paper.Layer} layer
-   * @param {paper.Path[]} shapes
+   * @param {ShapeDef[]} shapeDefs
    * @param {Map} config
    */
-  static doStonework(layer, shapes, config) {
+  static doStonework(layer, shapeDefs, config) {
     let fillColor = config.blackAndWhite ? config.style.colorPaper : config.style.colorShading;
     let overlapping = config.style.hatchingStrokes > 2;
-    for (let shape of shapes) {
-      if (shape instanceof paper.Path.Rectangle) {
-        let rect = shape.bounds;
+    for (let def of shapeDefs) {
+      if (!def.round) {
         let stonework = [];
-        let n = Math.ceil(rect.width / config.style.hatchingSize);
+        let n = Math.ceil(def.size.width / config.style.hatchingSize);
         for (let i = 0; i < n; i++) {
           stonework.push({
-            x: rect.left + rect.width * i / n,
-            y: rect.top,
+            x: def.pos.x + def.size.width * i / n,
+            y: def.pox.y,
+            hor: false
+          }, {
+            x: def.pos.x + def.size.width * (1 - i / n),
+            y: def.pox.y + def.size.height,
             hor: false
           });
         }
+
+        n = Math.ceil(def.size.height / config.style.hatchingSize);
         for (let i = 0; i < n; i++) {
           stonework.push({
-            x: rect.left + rect.width * (1 - i / n),
-            y: rect.bottom,
-            hor: false
-          });
-        }
-        n = Math.ceil(rect.height / config.style.hatchingSize);
-        for (let i = 0; i < n; i++) {
-          stonework.push({
-            x: right,
-            y: rect.top + rect.height * i / n,
+            x: def.pos.x + def.size.width,
+            y: def.pox.y + def.size.height * i / n,
             hor: true
-          });
-        }
-        for (let i = 0; i < n; i++) {
-          stonework.push({
-            x: rect.left,
-            y: rect.top + rect.height * (1 - i / n),
+          }, {
+            x: def.pos.x,
+            y: def.pox.y + def.size.height * (1 - i / n),
             hor: true
           });
         }
         if (overlapping) {
           stonework = Utils.shuffle(stonework);
         }
+        let hatchingSize = config.style.hatchingSize * 30;
+        let hatchingDistance = config.style.hatchingDistance * 30;
         for (let stone of stonework) {
-          let width = config.style.hatchingSize * (overlapping ? 1 + Math.abs(Random.times(4) * 2 - 1) : 1);
-          let height = config.style.hatchingDistance * Random.times(3) * 2;
+          let width = hatchingSize * (overlapping ? 1 + Math.abs(Random.times(4) * 2 - 1) : 1);
+          let height = hatchingDistance * Random.times(3) * 2;
           let poly = stone.hor ? Poly.rect(height, width) : Poly.rect(width, height);
-          Poly.asTranslate(poly, stone);
+          Poly.asTranslate(poly, stone.x * 30, stone.y * 30);
           layer.addChild(new paper.Path({
             segments: poly,
             strokeWidth: config.style.strokeNormal,
@@ -2289,37 +2230,33 @@ class Shading {
           }));
         }
       } else {
-        let circle = shape.bounds;
-
         /*
-         * 这段算法是计算出一个比path稍大（一个像素？）的边框，还有两处相似的地方，可以用下面的正则表达式搜索：
+         * 这段算法是计算出一个比path稍大（一个平方单位）的边框，还有两处相似的地方，可以用下面的正则表达式搜索：
          * Math.sqrt.*?\+\s*1
          *
          * TODO: 可以优化成直接找放大后的path的尺寸+1像素的边框。
          */
-        let r = circle.bounds.width / 60;
-        r = Math.sqrt(r * r * 4 + 1) / 2;
-        r *= 30;
+        let r = Math.sqrt(def.size.width * def.size.height + 1) / 2;
 
         let n = Math.ceil(Math.PI * 2 * r / config.style.hatchingSize);
-        let step = Math.PI * 2 / n;
+        let stepAngle = Math.PI * 2 / n;
         let stonework = [];
         for (let i = 0; i < n; i++) {
-          stonework.push(step * i);
+          stonework.push(stepAngle * i);
         }
         if (overlapping) {
           stonework = Utils.shuffle(stonework);
         }
         for (let stone of stonework) {
-          let width = step * (overlapping ? 1 + Math.abs(Random.times(4) * 2 - 1) : 1) / 2;
+          let width = stepAngle * (overlapping ? 1 + Math.abs(Random.times(4) * 2 - 1) : 1) / 2;
           let height = config.style.hatchingDistance * Random.times(3);
           let poly = [
-            new paper.Point({length: r + height, angleInRadians: stone - width}),
-            new paper.Point({length: r + height, angleInRadians: stone + width}),
-            new paper.Point({length: r - height, angleInRadians: stone + width}),
-            new paper.Point({length: r - height, angleInRadians: stone - width})
+            new paper.Point({length: (r + height) * 30, angleInRadians: stone - width}),
+            new paper.Point({length: (r + height) * 30, angleInRadians: stone + width}),
+            new paper.Point({length: (r - height) * 30, angleInRadians: stone + width}),
+            new paper.Point({length: (r - height) * 30, angleInRadians: stone - width})
           ];
-          Poly.asTranslate(poly, circle.center);
+          Poly.asTranslate(poly, def.center.multiply(30));
           layer.addChild(new paper.Path({
             segments: poly,
             strokeWidth: config.style.strokeNormal,
@@ -2334,16 +2271,16 @@ class Shading {
 
   /**
    * @param {paper.Layer} layer
-   * @param {paper.Path[]} shapes
+   * @param {ShapeDef[]} shapeDefs
    * @param {Map} config
    */
-  static doBricks(layer, shapes, config) {
+  static doBricks(layer, shapeDefs, config) {
     let strokeWidth = config.style.strokeNormal;
-    let t = (config.style.hatchingDistance - strokeWidth) / 2;
-    for (let shape of shapes) {
-      shape = Poly.expandPath(shape.clone(), t + strokeWidth);
-      shape.fillColor = config.style.colorInk;
-    }
+    let t = (config.style.hatchingDistance * 30 - strokeWidth) / 2;
+    let shapes = shapeDefs.map(def => def.toPath(t + strokeWidth, 0));
+    let wholeShape = Poly.unitePaths(shapes);
+    wholeShape.fillColor = config.style.colorInk;
+    layer.addChild(wholeShape);
     let shadingColor = config.blackAndWhite ? config.style.colorPaper : config.style.colorShading;
     if (shadingColor == config.style.colorInk) {
       return;
@@ -2353,28 +2290,29 @@ class Shading {
     let left = new paper.Point(-t, 0);
     let right = new paper.Point(t, 0);
     let step = config.style.hatchingSize;
-    for (let shape of shapes) {
+    for (let def of shapeDefs) {
+      let shape = def.toPath(t, 0);
+      shape.fillColor = shadingColor;
+      layer.addChild(shape);
+
       let segs = [];
-      Poly.expandPath(shape.clone(), t).fillColor = shadingColor;
-      if (shape instanceof paper.Path.Rectangle) {
-        let rect = shape.bounds;
-        let n = Math.ceil(rect.width / step);
+      if (!def.round) {
+        let n = Math.ceil(def.size.width / step);
         for (let i = 0; i < n; i++) {
-          segs.push([new paper.Point(rect.x + rect.width * (i + Random.times(3)) / n, rect.y), up]);
-          segs.push([new paper.Point(rect.x + rect.width * (1 - (i + Random.times(3)) / n), rect.y + rect.height), down]);
+          segs.push([new paper.Point(def.pos.x + def.size.width * (i + Random.times(3)) / n, def.pos.y).multiply(30), up]);
+          segs.push([new paper.Point(def.pos.x + def.size.width * (1 - (i + Random.times(3)) / n), def.pos.y + def.size.height).multiply(30), down]);
         }
-        n = Math.ceil(rect.height / step);
+        n = Math.ceil(def.size.height / step);
         for (let i = 0; i < n; i++) {
-          segs.push([new paper.Point(rect.x + rect.width, rect.y + rect.height * (i + Random.times(3)) / n), right]);
-          segs.push([new paper.Point(rect.x, rect.y + rect.height * (1 - (i + Random.times(3)) / n)), left]);
+          segs.push([new paper.Point(def.pos.x + def.size.width, def.pos.y + def.size.height * (i + Random.times(3)) / n).multiply(30), right]);
+          segs.push([new paper.Point(def.pos.x, def.pos.y + def.size.height * (1 - (i + Random.times(3)) / n)).multiply(30), left]);
         }
       } else {
-        let circle = shape.bounds;
-        let n = Math.ceil(shape.length / step);
+        let n = Math.ceil(2 * Math.PI * def.radius / step);
+        let center = def.center.multiply(30);
         for (let i = 0; i < n; i++) {
-          let d1 = new paper.Point({length: 1, angleInRadians: Math.PI * 2 * (i + Random.times(3)) / n});
-          let p1 = circle.center;
-          segs.push([p1.add(d1.multiply(circle.width/2)), d1.multiply(t)]);
+          let d = new paper.Point({length: 1, angleInRadians: Math.PI * 2 * (i + Random.times(3)) / n});
+          segs.push([center.add(d.multiply(def.radius * 30)), d.multiply(t)]);
         }
       }
       for (let [p, d] of segs) {
@@ -2677,6 +2615,49 @@ class SmallDais extends Drawing {
 }
 
 
+class ShapeDef {
+  /**
+   * @param {paper.Point} pos
+   * @param {paper.Size} size
+   * @param {number} radius
+   * @param {paper.Point} center
+   * @param {boolean} round
+   */
+  constructor(pos, size, radius, center, round) {
+    this.pos = new paper.Point(pos);
+    this.size = new paper.Size(size);
+    this.radius = radius;
+    this.center = new paper.Point(center);
+    this.round = round;
+  }
+
+  /**
+   * Create corresponding path.
+   * @param {number} expand the expanding distance in every dimentions.
+   * @param {number} corner the size of the rounded corners. The default value is `expand`.
+   * @return {paper.Path} the expanded path.
+   */
+  toPath(expand, corner=null) {
+    if (this.round) {
+      return new paper.Path.Circle({
+        center: this.center.multiply(30),
+        radius: (this.radius + expand) * 30,
+        strokeWidth: 0
+      });
+    }
+    if (corner == null) {
+      corner = Math.abs(expand);
+    }
+    return new paper.Path.Rectangle({
+      point: this.pos.subtract(expand).multiply(30),
+      size: this.size.add(expand * 2).multiply(30),
+      radius: corner * 30,
+      strokeWidth: 0,
+    });
+  }
+}
+
+
 class Room extends paper.Rectangle {
   /**
    * Construct a Room instance.
@@ -2790,17 +2771,17 @@ class Room extends paper.Rectangle {
   }
 
   /**
-   * @return {paper.Point[]}
+   * @return {paper.Path}
    */
   getPoly() {
     if (this.round) {
-      return new paper.Shape.Circle({
+      return new paper.Path.Circle({
         center: this.inner.center,
         radius: Math.sqrt(this.inner.width * this.inner.width + 1) / 2,
         strokeWidth: 0
       });
     }
-    return new paper.Shape.Rectangle({
+    return new paper.Path.Rectangle({
       point: this.inner.point,
       size: this.inner.size,
       strokeWidth: 0
@@ -2808,14 +2789,13 @@ class Room extends paper.Rectangle {
   }
 
   /**
-   * @return {paper.Rectangle}
+   * @return {ShapeDef}
    */
   getHatchingArea() {
     if (this.round) {
-      let c = this.inner.center, r = this.inner.width / 2;
-      return new paper.Path.Circle(c.multiply(30), r * 30);
+      return new ShapeDef(this.inner.topLeft, this.inner.size, this.inner.width/2, this.inner.center, true);
     }
-    return new paper.Path.Rectangle(this.inner.point.multiply(30), this.inner.size.multiply(30));
+    return new ShapeDef(this.inner.topLeft, this.inner.size, 0, this.inner.center, false);
   }
 
   /**
@@ -3539,7 +3519,7 @@ class Door extends paper.Point {
   }
 
   getPoly() {
-    let poly;
+    let poly = null;
     switch (this.type) {
       case Door.NORMAL:
       case Door.ARCHWAY:
@@ -3559,15 +3539,11 @@ class Door extends paper.Point {
           new paper.Point(-0.3, -0.25), //
           new paper.Point(-0.5, -0.25)  //
         ];
-        Poly.asRotateYX(poly, -this.dir.x, this.dir.y);
-        Poly.asTranslate(poly, this.add(0.5));
-        return poly;
+        break;
       case Door.SECRET:
         poly = Poly.rect(1, 0.5);
         Poly.asTranslate(poly, 0, 0.25);
-        Poly.asRotateYX(poly, -this.dir.x, this.dir.y);
-        Poly.asTranslate(poly, this.add(0.5));
-        return poly;
+        break;
       case Door.BARRED:
         poly = [
           new paper.Point(-0.5, 0.5),  //
@@ -3579,19 +3555,26 @@ class Door extends paper.Point {
           new paper.Point(-0.3, 0),    //  +--------+
           new paper.Point(-0.5, 0)     //
         ];
-        Poly.asRotateYX(poly, -this.dir.x, this.dir.y);
-        Poly.asTranslate(poly, this.add(0.5));
-        return poly;
-      default:
-        // +---+
-        // |   |
-        // +---+
-        return new paper.Shape.Rectangle(this, this.add(1));
+        break;
     }
+    if (poly != null) {
+      Poly.asRotateYX(poly, -this.dir.x, this.dir.y);
+      Poly.asTranslate(poly, this.add(0.5));
+      return new paper.Path({
+        segments: poly,
+        strokeWidth: 0,
+        closed: true
+      });
+    }
+    return new paper.Path.Rectangle({
+      point: this,   // +---+
+      size: [1, 1],  // |   |
+      strokeWidth: 0 // +---+
+    });
   }
 
   getHatchingArea() {
-    return new paper.Path.Rectangle(this.x * 30, this.y * 30, 30, 30);
+    return new ShapeDef(this, new paper.Size(1, 1), 0, this.add(0.5), false);
   }
 
   /**
@@ -4379,7 +4362,7 @@ class MapGenerator {
     this.doors = [];
     this.doorBlocks = [];
     this.planner = null;
-    this.unitedShape = null;
+    this.unitedPath = null;
 
     this.config = Object.assign({
       noteViewMode: NoteViewMode_NORMAL,
@@ -4889,12 +4872,12 @@ class MapGenerator {
     this._front.activate();
 
     this.drawShading();
-    let shapes = this.drawable.map(shape => Poly.scale(shape.getPoly(), 30));
-    this.unitedShape = this.uniteShapes(shapes);
-    this.drawShapes(this.unitedShape);
-    this.drawWater(this.unitedShape);
-    this.drawShadows(this.unitedShape);
-    this.drawGrids(this.unitedShape);
+    let paths = this.drawable.map(shape => Poly.scale(shape.getPoly(), 30));
+    this.unitedPath = Poly.unitePaths(paths);
+    this.drawShapes(this.unitedPath);
+    this.drawWater(this.unitedPath);
+    this.drawShadows(this.unitedPath);
+    this.drawGrids(this.unitedPath);
     if (this.config.showCorners) {
       this.rooms.forEach(room => room.drawCorners(this.corners));
     }
@@ -4925,33 +4908,21 @@ class MapGenerator {
     Shading.draw(this.shading, this.drawable.map(shape => shape.getHatchingArea()), this.config);
   }
 
-  uniteShapes(shapes) {
-    let mask = Poly.toPath(shapes[0]);
-    let tmpShapes = [];
-    for (let i = 1; i < shapes.length; i++) {
-      let p = Poly.toPath(shapes[i]);
-      tmpShapes.push(p, mask);
-      mask = mask.unite(p);
-    }
-    tmpShapes.forEach(p => p.remove());
-    return mask;
-  }
-
-  drawShapes(unitedShape) {
+  drawShapes(unitedPath) {
     let thickness = Utils.getStrokeWidth(this.config);
     let white = Utils.getBgColor(this.config);
 
     this.shapes.removeChildren();
-    this.shapes.addChild(unitedShape.clone());
+    this.shapes.addChild(unitedPath.clone());
     let shape = this.shapes.firstChild;
     shape.strokeColor = this.config.style.colorInk;
     shape.strokeWidth = thickness;
     shape.fillColor = white;
   }
 
-  drawWater(unitedShape) {
+  drawWater(unitedPath) {
     this.water.removeChildren();
-    this.water.addChild(unitedShape.clone());
+    this.water.addChild(unitedPath.clone());
     this.water.clipped = true;
     this.water.visible = this.config.showWater;
     this.updateWater();
@@ -5015,13 +4986,13 @@ class MapGenerator {
     this.water.addChild(border);
   }
 
-  drawShadows(unitedShape) {
+  drawShadows(unitedPath) {
     this.shadows.removeChildren();
     if (this.config.style.shadowColor === '#FFFFFFFF') {
       return;
     }
 
-    this.shadows.addChildren([unitedShape.clone(), unitedShape.clone(), unitedShape.clone()]);
+    this.shadows.addChildren([unitedPath.clone(), unitedPath.clone(), unitedPath.clone()]);
     this.shadows.clipped = true;
 
     let shape = this.shadows.children[1];
@@ -5041,17 +5012,17 @@ class MapGenerator {
     }));
   }
 
-  drawGrids(unitedShape) {
+  drawGrids(unitedPath) {
     this.grids.removeChildren();
-    if (unitedShape == null || this.config.gridMode == GridType_HIDDEN) {
+    if (unitedPath == null || this.config.gridMode == GridType_HIDDEN) {
       return;
     }
 
-    this.grids.addChild(unitedShape.clone());
+    this.grids.addChild(unitedPath.clone());
     this.grids.clipped = true;
 
     let strokeWidth = this.config.gridMode == GridType_DOTTED ? this.config.style.strokeNormal : this.config.style.strokeThin;
-    let bounds = unitedShape.bounds;
+    let bounds = unitedPath.bounds;
     for (let y = bounds.top + 30; y < bounds.bottom; y += 30) {
       this.grids.addChild(new paper.Path.Line({
         from: [bounds.left, y],
@@ -5093,7 +5064,7 @@ class MapGenerator {
   setGridMode(mode) {
     this.config.gridMode = mode;
     updateGridPattern();
-    this.drawGrids(this.unitedShape);
+    this.drawGrids(this.unitedPath);
   }
 
   updateGridPattern() {
